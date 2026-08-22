@@ -11,208 +11,140 @@ class EditorManager {
 
     initShortcuts() {
         document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
-                e.preventDefault();
-                this.undo();
-            }
-            // Ctrl+Y or Ctrl+Shift+Z for redo
-            if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
-                e.preventDefault();
-                this.redo();
-            }
-            // Ctrl+C for copy
-            if (e.ctrlKey && e.key === 'c') {
-                e.preventDefault();
-                this.copy();
-            }
-            // Ctrl+V for paste
-            if (e.ctrlKey && e.key === 'v') {
-                e.preventDefault();
-                this.paste();
-            }
-            // Delete for delete
-            if (e.key === 'Delete') {
-                e.preventDefault();
-                this.delete();
-            }
+            const tag = document.activeElement?.tagName;
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+            if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); this.undo(); }
+            else if ((e.ctrlKey && e.key.toLowerCase() === 'y') || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); this.redo(); }
+            else if (e.ctrlKey && e.key.toLowerCase() === 'c') { e.preventDefault(); this.copy(); }
+            else if (e.ctrlKey && e.key.toLowerCase() === 'v') { e.preventDefault(); this.paste(); }
+            else if (e.key === 'Delete') { e.preventDefault(); this.delete(); }
         });
     }
 
-    updateTimeline() {
-        if (window.TimelineManager?.updateTimelineWidth) {
-            window.TimelineManager.updateTimelineWidth();
-        }
+    snapshot() {
+        return JSON.parse(JSON.stringify(window.TimelineManager?.tracks || []));
     }
 
-    addToHistory(action) {
-        this.history.push(action);
-        if (this.history.length > this.maxHistory) {
-            this.history.shift();
-        }
-        this.redoStack = []; // Clear redo stack on new action
+    addToHistory(type, before, after) {
+        this.history.push({ type, before, after });
+        if (this.history.length > this.maxHistory) this.history.shift();
+        this.redoStack = [];
     }
 
-    undo() {
-        if (this.history.length === 0) return;
+    async restore(snapshot) {
+        if (!snapshot || !window.TimelineManager) return;
+        const clips = snapshot.flatMap((track, trackIndex) => (track.clips || []).map(clip => ({ ...clip, trackIndex })));
+        if (typeof window.TimelineManager.displayClips === 'function') await window.TimelineManager.displayClips(clips);
+        window.TimelineManager.updateTimelineWidth?.();
+    }
+
+    async undo() {
         const action = this.history.pop();
+        if (!action) return window.App?.notify?.('Nothing to undo');
         this.redoStack.push(action);
-        this.executeUndo(action);
-        window.App?.notify?.("Undo: " + action.type);
+        await this.restore(action.before);
+        window.App?.notify?.(`Undo: ${action.type}`);
     }
 
-    redo() {
-        if (this.redoStack.length === 0) return;
+    async redo() {
         const action = this.redoStack.pop();
+        if (!action) return window.App?.notify?.('Nothing to redo');
         this.history.push(action);
-        this.executeRedo(action);
-        window.App?.notify?.("Redo: " + action.type);
+        await this.restore(action.after);
+        window.App?.notify?.(`Redo: ${action.type}`);
     }
 
-    executeUndo(action) {
-        // Implement specific undo logic based on action type
-        switch (action.type) {
-            case 'add_clip':
-                window.TimelineManager.removeClip(action.clipId);
-                break;
-            case 'remove_clip':
-                // Re-add the clip
-                window.TimelineManager.addClip(action.clip, action.trackIndex);
-                break;
-            case 'cut_clip':
-                // Re-add the cut clip
-                window.TimelineManager.addClip(action.clip, action.trackIndex);
-                break;
-            default:
-                console.log("Undo not implemented for:", action.type);
-        }
-    }
-
-    executeRedo(action) {
-        // Implement specific redo logic based on action type
-        switch (action.type) {
-            case 'add_clip':
-                window.TimelineManager.addClip(action.clip, action.trackIndex);
-                break;
-            case 'remove_clip':
-                window.TimelineManager.removeClip(action.clipId);
-                break;
-            case 'cut_clip':
-                window.TimelineManager.removeClip(action.clipId);
-                break;
-            default:
-                console.log("Redo not implemented for:", action.type);
-        }
+    selectedData() {
+        const el = document.querySelector('.timeline-clip.selected');
+        if (!el || !window.TimelineManager) return null;
+        const trackIndex = Number(el.dataset.trackIndex);
+        const clip = window.TimelineManager.getClips(trackIndex)?.find(c => c.id === el.id);
+        return clip ? { el, clip, trackIndex } : null;
     }
 
     copy() {
-        const selectedClip = document.querySelector('.timeline-clip.selected');
-        if (selectedClip) {
-            const clipId = selectedClip.id;
-            const trackIndex = parseInt(selectedClip.dataset.trackIndex);
-            const clipData = window.TimelineManager.getClips(trackIndex).find(c => c.id === clipId);
-            
-            if (clipData) {
-                this.clipboard = {
-                    clipId,
-                    clip: JSON.parse(JSON.stringify(clipData)), // Deep copy
-                    trackIndex
-                };
-                window.App?.notify?.("Clip copied to clipboard");
-            } else {
-                window.App?.notify?.("Could not find clip data");
-            }
-        } else {
-            window.App?.notify?.("No clip selected to copy");
-        }
+        const data = this.selectedData();
+        if (!data) return window.App?.notify?.('No clip selected to copy');
+        this.clipboard = { clip: JSON.parse(JSON.stringify(data.clip)), trackIndex: data.trackIndex };
+        window.App?.notify?.('Clip copied');
     }
 
     cut() {
-        const selectedClip = document.querySelector('.timeline-clip.selected');
-        if (selectedClip) {
-            this.copy(); // Copy first
-            this.delete(); // Then delete
-            window.App?.notify?.("Clip cut to clipboard");
-        } else {
-            window.App?.notify?.("No clip selected to cut");
-        }
+        const data = this.selectedData();
+        if (!data) return window.App?.notify?.('No clip selected to cut');
+        this.clipboard = { clip: JSON.parse(JSON.stringify(data.clip)), trackIndex: data.trackIndex };
+        const before = this.snapshot();
+        window.TimelineManager.removeClip(data.clip.id);
+        const after = this.snapshot();
+        this.addToHistory('cut', before, after);
+        window.App?.notify?.('Clip cut');
     }
 
-    paste() {
-        if (!this.clipboard) {
-            window.App?.notify?.("Nothing in clipboard");
-            return;
-        }
-        
-        // For simplicity, we'll add a copy of the clipped clip to the same track
-        const clipToPaste = {...this.clipboard.clip};
-        clipToPaste.id = `clip-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-        clipToPaste.startTime = window.PlayerManager?.getCurrentTime?.() || 0;
-        
-        window.TimelineManager.addClip(clipToPaste, this.clipboard.trackIndex);
-        this.addToHistory({type: 'add_clip', clipId: clipToPaste.id, clip: clipToPaste, trackIndex: this.clipboard.trackIndex});
-        window.App?.notify?.("Clip pasted");
+    async paste() {
+        if (!this.clipboard) return window.App?.notify?.('Nothing in clipboard');
+        const clip = JSON.parse(JSON.stringify(this.clipboard.clip));
+        clip.id = `clip-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        clip.startTime = window.PlayerManager?.getCurrentTime?.() || clip.startTime || 0;
+        clip.endTime = clip.startTime + (clip.duration || 0);
+        const before = this.snapshot();
+        await window.TimelineManager.addClip(clip, this.clipboard.trackIndex);
+        const after = this.snapshot();
+        this.addToHistory('paste', before, after);
+        window.App?.notify?.('Clip pasted');
     }
 
     delete() {
-        const selectedClip = document.querySelector('.timeline-clip.selected');
-        if (selectedClip) {
-            const clipId = selectedClip.id;
-            const trackIndex = parseInt(selectedClip.dataset.trackIndex);
-            const clipData = window.TimelineManager.getClips(trackIndex).find(c => c.id === clipId);
-            
-            if (clipData) {
-                window.TimelineManager.removeClip(clipId);
-                this.addToHistory({type: 'remove_clip', clipId, clip: clipData, trackIndex});
-                window.App?.notify?.("Clip deleted");
-            }
-        } else {
-            window.App?.notify?.("No clip selected to delete");
-        }
+        const data = this.selectedData();
+        if (!data) return window.App?.notify?.('No clip selected');
+        const before = this.snapshot();
+        window.TimelineManager.removeClip(data.clip.id);
+        const after = this.snapshot();
+        this.addToHistory('delete', before, after);
+        window.App?.notify?.('Clip deleted');
     }
 
-    duplicate() {
-        const selectedClip = document.querySelector('.timeline-clip.selected');
-        if (selectedClip) {
-            const clipId = selectedClip.id;
-            const trackIndex = parseInt(selectedClip.dataset.trackIndex);
-            const clipData = window.TimelineManager.getClips(trackIndex).find(c => c.id === clipId);
-            
-            if (clipData) {
-                const clipToDuplicate = {...clipData};
-                clipToDuplicate.id = `clip-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-                clipToDuplicate.startTime = clipData.startTime + clipData.duration; // Place after original
-                
-                window.TimelineManager.addClip(clipToDuplicate, trackIndex);
-                this.addToHistory({type: 'add_clip', clipId: clipToDuplicate.id, clip: clipToDuplicate, trackIndex});
-                window.App?.notify?.("Clip duplicated");
-            }
-        } else {
-            window.App?.notify?.("No clip selected to duplicate");
-        }
+    async duplicate() {
+        const data = this.selectedData();
+        if (!data) return window.App?.notify?.('No clip selected');
+        const clip = JSON.parse(JSON.stringify(data.clip));
+        clip.id = `clip-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        clip.startTime = data.clip.endTime;
+        clip.endTime = clip.startTime + (clip.duration || 0);
+        const before = this.snapshot();
+        await window.TimelineManager.addClip(clip, data.trackIndex);
+        const after = this.snapshot();
+        this.addToHistory('duplicate', before, after);
+        window.App?.notify?.('Clip duplicated');
     }
 
     split() {
-        const selectedClip = document.querySelector('.timeline-clip.selected');
-        if (selectedClip) {
-            window.TimelineManager.splitSelected();
-        } else {
-            window.App?.notify?.("No clip selected to split");
-        }
+        const data = this.selectedData();
+        if (!data) return window.App?.notify?.('No clip selected to split');
+        const before = this.snapshot();
+        window.TimelineManager.splitSelected();
+        const after = this.snapshot();
+        this.addToHistory('split', before, after);
     }
 
     trim() {
-        window.App?.notify?.("Trim function called");
-        // Implementation would trim selected clip at playhead position
+        const data = this.selectedData();
+        if (!data) return window.App?.notify?.('No clip selected');
+        const playhead = window.PlayerManager?.getCurrentTime?.() || 0;
+        if (playhead <= data.clip.startTime || playhead >= data.clip.endTime) return window.App?.notify?.('Place the playhead inside the selected clip');
+        const before = this.snapshot();
+        data.clip.duration = playhead - data.clip.startTime;
+        data.clip.endTime = playhead;
+        window.TimelineManager.updateClipElement?.(data.el, data.clip);
+        window.TimelineManager.updateTimelineWidth?.();
+        const after = this.snapshot();
+        this.addToHistory('trim', before, after);
+        window.App?.notify?.('Clip trimmed at playhead');
     }
 
-    getCurrentClip() {
-        return document.querySelector('.timeline-clip.selected');
-    }
+    getCurrentClip() { return document.querySelector('.timeline-clip.selected'); }
 }
 
 window.EditorManager = new EditorManager();
-
-// Expose methods to window for easy access from HTML buttons
 window.undo = () => window.EditorManager.undo();
 window.redo = () => window.EditorManager.redo();
 window.cut = () => window.EditorManager.cut();
