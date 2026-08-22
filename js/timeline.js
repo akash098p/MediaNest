@@ -4,291 +4,170 @@ class TimelineManager {
     constructor() {
         this.tracks = [];
         this.currentTrackIndex = 0;
-        this.clipDuration = 0;
-        this.playheadPosition = 0;
         this.clipCounter = 0;
+        this.pixelsPerSecond = 50;
         this.initTracks();
     }
 
     initTracks() {
-        // Video Track - matches HTML ID
-        const videoTrack = {
-            id: 'track-video',
-            name: 'Video Track 1',
-            type: 'video',
-            clips: [],
-            element: document.getElementById('videoTrack1')
-        };
-
-        // Audio Track 1 - matches HTML ID
-        const audioTrack1 = {
-            id: 'track-audio-1',
-            name: 'Audio Track 1',
-            type: 'audio',
-            clips: [],
-            element: document.getElementById('audioTrack1')
-        };
-
-        // Audio Track 2 - matches HTML ID
-        const audioTrack2 = {
-            id: 'track-audio-2',
-            name: 'Audio Track 2',
-            type: 'audio',
-            clips: [],
-            element: document.getElementById('audioTrack2')
-        };
-
-        this.tracks = [videoTrack, audioTrack1, audioTrack2];
-        console.log("Timeline: Tracks initialized");
+        this.tracks = [
+            { id: 'track-video', name: 'Video Track 1', type: 'video', clips: [], element: document.getElementById('videoTrack1') },
+            { id: 'track-audio-1', name: 'Audio Track 1', type: 'audio', clips: [], element: document.getElementById('audioTrack1') },
+            { id: 'track-audio-2', name: 'Audio Track 2', type: 'audio', clips: [], element: document.getElementById('audioTrack2') }
+        ];
     }
 
-    async addClip(clip, trackIndex = this.currentTrackIndex) {
-        if (!this.tracks[trackIndex]) {
-            console.error("Invalid track index:", trackIndex);
-            return;
-        }
-
+    async addClip(clip, trackIndex = this.currentTrackIndex, preservePosition = false) {
         const track = this.tracks[trackIndex];
-        
-        // Get duration from video/audio element
-        if (clip.type === 'video' || clip.type === 'audio') {
+        if (!track || !clip) return null;
+        if (clip.type === 'video' && track.type !== 'video') trackIndex = 0;
+        if (clip.type === 'audio' && track.type === 'video') trackIndex = 1;
+        const target = this.tracks[trackIndex];
+
+        if (!clip.duration || !Number.isFinite(clip.duration) || clip.duration <= 0) {
             clip.duration = await this.getClipDuration(clip);
         }
-        
-        clip.id = clip.id || `clip-${Date.now()}-${this.clipCounter++}`;
+        clip.id = String(clip.id || `clip-${Date.now()}-${this.clipCounter++}`);
         clip.trackIndex = trackIndex;
-        clip.startTime = track.clips.reduce((total, c) => total + (c.duration || 0), 0);
+        if (!preservePosition) {
+            const last = target.clips[target.clips.length - 1];
+            clip.startTime = last ? last.endTime : 0;
+        } else {
+            clip.startTime = Number(clip.startTime) || 0;
+        }
         clip.endTime = clip.startTime + clip.duration;
-
-        track.clips.push(clip);
-        this.renderClip(clip, track, trackIndex);
-        
-        // Update timeline width
+        target.clips.push(clip);
+        this.renderClip(clip, target, trackIndex);
         this.updateTimelineWidth();
-        
-        window.App?.notify?.(`Added ${clip.name} to ${track.name}`);
+        return clip;
     }
 
-    async getClipDuration(clip) {
-        return new Promise((resolve) => {
-            if (!clip.src) {
-                resolve(5); // Default 5 seconds
-                return;
-            }
-
-            const media = clip.type === 'video' ? document.createElement('video') : document.createElement('audio');
-            media.src = clip.src;
+    getClipDuration(clip) {
+        return new Promise(resolve => {
+            if (!clip?.src) return resolve(5);
+            const media = document.createElement(clip.type === 'video' ? 'video' : 'audio');
+            let done = false;
+            const finish = value => { if (!done) { done = true; resolve(Number.isFinite(value) && value > 0 ? value : 5); } };
             media.preload = 'metadata';
-            media.crossOrigin = "anonymous";
-
-            const onLoaded = () => {
-                media.removeEventListener('loadedmetadata', onLoaded);
-                media.removeEventListener('error', onError);
-                resolve(media.duration || 5);
-            };
-
-            const onError = () => {
-                media.removeEventListener('loadedmetadata', onLoaded);
-                media.removeEventListener('error', onError);
-                resolve(5);
-            };
-
-            media.addEventListener('loadedmetadata', onLoaded, { once: true });
-            media.addEventListener('error', onError, { once: true });
-
-            // Timeout for 3 seconds
-            setTimeout(() => {
-                media.removeEventListener('loadedmetadata', onLoaded);
-                media.removeEventListener('error', onError);
-                resolve(5);
-            }, 3000);
+            media.onloadedmetadata = () => finish(media.duration);
+            media.onerror = () => finish(5);
+            setTimeout(() => finish(media.duration), 5000);
+            media.src = clip.src;
         });
     }
 
     renderClip(clip, track, trackIndex) {
         if (!track.element) return;
-
         const clipEl = document.createElement('div');
-        clipEl.className = `${clip.type}`;
+        clipEl.className = `timeline-clip ${clip.type}`;
         clipEl.id = clip.id;
         clipEl.dataset.clipId = clip.id;
         clipEl.dataset.trackIndex = trackIndex;
-        
-        // Position based on start time (50px per second)
-        clipEl.style.left = `${clip.startTime * 50}px`;
-        clipEl.style.width = `${Math.max(50, clip.duration * 50)}px`;
+        clipEl.title = `${clip.name} — ${this.formatTime(clip.duration)}`;
+        this.updateClipElement(clipEl, clip);
+        clipEl.innerHTML = `<span class="clip-name"></span><span class="clip-duration"></span>`;
+        clipEl.querySelector('.clip-name').textContent = clip.name;
+        clipEl.querySelector('.clip-duration').textContent = this.formatTime(clip.duration);
 
-        const durationMinutes = Math.floor(clip.duration / 60);
-        const durationSeconds = Math.floor(clip.duration % 60);
-
-        clipEl.innerHTML = `
-            <span class="clip-name">${clip.name}</span>
-            <span class="clip-duration">${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}</span>
-        `;
-
-        // Add click to select
-        clipEl.addEventListener('click', (e) => {
-            document.querySelectorAll('.timeline-clip').forEach(c => c.classList.remove('selected'));
-            clipEl.classList.add('selected');
-            e.stopPropagation();
+        clipEl.addEventListener('click', e => {
+            if (e.button !== 2) this.selectClip(clip.id);
         });
-
-        // Add drag functionality
-        clipEl.addEventListener('mousedown', (e) => this.onClipMouseDown(e, clip, track));
-
+        clipEl.addEventListener('dblclick', () => window.PlayerManager?.setElementSource?.(clip));
+        clipEl.addEventListener('mousedown', e => this.onClipMouseDown(e, clip, trackIndex));
         track.element.appendChild(clipEl);
     }
 
-    onClipMouseDown(e, clip, track) {
+    updateClipElement(el, clip) {
+        el.style.left = `${Math.max(0, clip.startTime) * this.pixelsPerSecond}px`;
+        el.style.width = `${Math.max(40, clip.duration * this.pixelsPerSecond)}px`;
+    }
+
+    selectClip(clipId) {
+        document.querySelectorAll('.timeline-clip').forEach(el => el.classList.toggle('selected', el.id === clipId));
+        const clip = this.getClips().find(c => c.id === clipId);
+        if (clip) {
+            this.currentTrackIndex = clip.trackIndex;
+            window.PlayerManager?.setElementSource?.(clip);
+            window.App?.notify?.(`Selected ${clip.name}`);
+        }
+    }
+
+    onClipMouseDown(e, clip, trackIndex) {
+        if (e.button !== 0) return;
         e.preventDefault();
-
-        const clipEl = e.currentTarget;
+        this.selectClip(clip.id);
         const startX = e.clientX;
-        let currentX = startX;
-
-        const onMouseMove = (moveEvent) => {
-            currentX = moveEvent.clientX;
-            const deltaX = currentX - startX;
-            const newTime = Math.max(0, clip.startTime + (deltaX / 50));
-            clip.startTime = newTime;
-            clipEl.style.left = `${newTime * 50}px`;
+        const originalStart = clip.startTime;
+        const el = e.currentTarget;
+        const onMove = ev => {
+            const delta = (ev.clientX - startX) / this.pixelsPerSecond;
+            clip.startTime = Math.max(0, originalStart + delta);
+            clip.endTime = clip.startTime + clip.duration;
+            this.updateClipElement(el, clip);
         };
-
-        const onMouseUp = () => {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            this.normalizeTrack(trackIndex);
+            this.updateTimelineWidth();
         };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }
 
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+    normalizeTrack(trackIndex) {
+        const track = this.tracks[trackIndex];
+        if (!track) return;
+        track.clips.sort((a, b) => a.startTime - b.startTime);
+        track.clips.forEach(clip => { clip.endTime = clip.startTime + clip.duration; const el = document.getElementById(clip.id); if (el) this.updateClipElement(el, clip); });
     }
 
     updateTimelineWidth() {
-        const timeline = document.getElementById('tracksContainer');
-        if (timeline) {
-            const totalDuration = this.tracks.reduce((sum, track) =>
-                sum + track.clips.reduce((t, c) => t + (c.duration || 0), 0), 0);
-            timeline.style.width = `${Math.max(600, totalDuration * 50)}px`;
-        }
+        const container = document.getElementById('tracksContainer');
+        if (!container) return;
+        const maxEnd = Math.max(10, ...this.getClips().map(c => c.endTime || c.startTime + c.duration || 0));
+        container.style.minWidth = `${Math.max(600, maxEnd * this.pixelsPerSecond + 100)}px`;
     }
 
-    getClips(trackIndex = null) {
-        if (trackIndex !== null) {
-            return this.tracks[trackIndex]?.clips || [];
-        }
-        return this.tracks.flatMap(t => t.clips);
-    }
-
-    getFirstClip() {
-        for (const track of this.tracks) {
-            if (track.clips.length > 0) {
-                return track.clips[0];
-            }
-        }
-        return null;
-    }
-
-    getNextClip() {
-        // Return the currently selected clip or first clip
-        const selected = document.querySelector('.timeline-clip.selected');
-        if (selected) {
-            const clipId = selected.id;
-            for (const track of this.tracks) {
-                const clip = track.clips.find(c => c.id === clipId);
-                if (clip) return clip;
-            }
-        }
-        return this.getFirstClip();
-    }
+    getClips(trackIndex = null) { return trackIndex === null ? this.tracks.flatMap(t => t.clips) : (this.tracks[trackIndex]?.clips || []); }
+    getFirstClip() { return this.getClips().sort((a, b) => a.startTime - b.startTime)[0] || null; }
+    getNextClip() { return document.querySelector('.timeline-clip.selected') ? this.getClips().find(c => c.id === document.querySelector('.timeline-clip.selected').id) || this.getFirstClip() : this.getFirstClip(); }
 
     displayClips(clips) {
         this.clearClips();
-        clips.forEach(clip => {
-            const trackIndex = clip.trackIndex !== undefined ? clip.trackIndex : 0;
-            this.addClip(clip, trackIndex);
-        });
+        const tasks = clips.map(clip => this.addClip({ ...clip }, Number.isInteger(clip.trackIndex) ? clip.trackIndex : 0, true));
+        return Promise.all(tasks);
     }
 
-    clearClips() {
-        this.tracks.forEach(track => {
-            track.clips = [];
-            if (track.element) {
-                track.element.innerHTML = '';
-            }
-        });
-    }
-
-    updatePlayhead(position) {
-        const playhead = document.getElementById('playhead');
-        if (playhead) {
-            playhead.style.left = `${position}%`;
-        }
-    }
-
-    onPlaybackEnded() {
-        this.playheadPosition = 0;
-        this.updatePlayhead(0);
-        window.PlayerManager?.stop();
-    }
-
-    removeClip(clipId) {
-        for (const track of this.tracks) {
-            const index = track.clips.findIndex(c => c.id === clipId);
-            if (index !== -1) {
-                const el = document.getElementById(clipId);
-                if (el) el.remove();
-                track.clips.splice(index, 1);
-                this.updateTimelineWidth();
-                return true;
-            }
-        }
-        return false;
-    }
-
-    selectTrack(trackIndex) {
-        this.currentTrackIndex = trackIndex;
-        document.querySelectorAll('.track-header').forEach((header, i) => {
-            header.classList.toggle('selected', i === trackIndex);
-        });
-    }
+    clearClips() { this.tracks.forEach(t => { t.clips = []; if (t.element) t.element.innerHTML = ''; }); }
+    removeClip(id) { for (const track of this.tracks) { const i = track.clips.findIndex(c => c.id === id); if (i >= 0) { track.clips.splice(i, 1); document.getElementById(id)?.remove(); this.updateTimelineWidth(); return true; } } return false; }
+    selectTrack(index) { if (this.tracks[index]) this.currentTrackIndex = index; }
 
     splitSelected() {
-        const selectedClip = document.querySelector('.timeline-clip.selected');
-        if (!selectedClip) {
-            window.App?.notify?.("No clip selected to split");
-            return;
-        }
-
-        const clipId = selectedClip.id;
-        for (const track of this.tracks) {
-            const index = track.clips.findIndex(c => c.id === clipId);
-            if (index !== -1) {
-                const clip = track.clips[index];
-                const midPoint = clip.startTime + (clip.duration / 2);
-                
-                const clip1 = { 
-                    ...clip, 
-                    id: `${clip.id}-a`, 
-                    endTime: midPoint, 
-                    duration: clip.duration / 2 
-                };
-                const clip2 = { 
-                    ...clip, 
-                    id: `${clip.id}-b`, 
-                    startTime: midPoint, 
-                    endTime: clip.endTime, 
-                    duration: clip.duration / 2 
-                };
-                
-                track.clips.splice(index, 1, clip2, clip1);
-                this.renderClip(clip1, track, this.currentTrackIndex);
-                this.renderClip(clip2, track, this.currentTrackIndex);
-                this.updateTimelineWidth();
-                window.App?.notify?.("Split clip");
-                return;
-            }
-        }
+        const el = document.querySelector('.timeline-clip.selected');
+        if (!el) return window.App?.notify?.('No clip selected to split');
+        const clip = this.getClips().find(c => c.id === el.id);
+        if (!clip || clip.duration < 0.1) return;
+        const at = window.PlayerManager?.getCurrentTime?.() || (clip.startTime + clip.duration / 2);
+        const splitAt = Math.max(clip.startTime + 0.05, Math.min(at, clip.endTime - 0.05));
+        const firstDuration = splitAt - clip.startTime;
+        const second = { ...clip, id: `clip-${Date.now()}-${this.clipCounter++}`, startTime: splitAt, duration: clip.duration - firstDuration, endTime: clip.endTime };
+        clip.duration = firstDuration;
+        clip.endTime = splitAt;
+        const track = this.tracks[clip.trackIndex];
+        const index = track.clips.findIndex(c => c.id === clip.id);
+        track.clips.splice(index + 1, 0, second);
+        el.classList.remove('selected');
+        this.renderClip(clip, track, clip.trackIndex);
+        this.renderClip(second, track, clip.trackIndex);
+        el.remove();
+        this.updateTimelineWidth();
+        window.App?.notify?.('Clip split at playhead');
     }
+
+    onPlaybackEnded() { window.PlayerManager?.stop?.(); }
+    updatePlayhead(position) { const p = document.getElementById('playhead'); if (p) p.style.left = `${position}%`; }
+    formatTime(seconds) { if (!Number.isFinite(seconds)) return '0:00'; return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`; }
 }
 
 window.TimelineManager = new TimelineManager();
