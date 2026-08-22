@@ -12,6 +12,7 @@ class PlayerManager {
         this.sourceNodes = new WeakMap();
         this.gainNodes = new WeakMap();
         this.panNodes = new WeakMap();
+        this.fadeFrame = null;
         this.initElements();
     }
 
@@ -20,7 +21,9 @@ class PlayerManager {
             if (!el) return;
             el.controls = true;
             el.addEventListener('loadedmetadata', () => this.updateTimeDisplay());
-            el.addEventListener('timeupdate', () => this.updateTimeDisplay());
+            el.addEventListener('timeupdate', () => { this.updateTimeDisplay(); this.applyClipGain(); });
+            el.addEventListener('play', () => { this.isPlaying = true; this.enableAudioProcessing(); });
+            el.addEventListener('pause', () => { this.isPlaying = false; });
             el.addEventListener('ended', () => this.onEnded());
             el.addEventListener('error', () => this.handleMediaError());
         });
@@ -43,9 +46,9 @@ class PlayerManager {
         if (this.audioElement) this.audioElement.style.display = clip.type === 'audio' ? 'block' : 'none';
         this.currentElement.src = clip.src;
         this.currentElement.playbackRate = Number(clip.playbackRate) || this.playbackRate;
-        this.currentElement.volume = clip.muted ? 0 : this.clamp(Number(clip.volume ?? 1), 0, 1);
         this.currentElement.muted = !!clip.muted;
         this.currentElement.load();
+        this.applyClipGain();
         window.App?.notify?.(`Loaded ${clip.name || 'media'}`);
         return true;
     }
@@ -54,11 +57,10 @@ class PlayerManager {
         if (!this.currentElement) this.loadCurrentElement();
         if (!this.currentElement) return;
         try {
+            await this.enableAudioProcessing();
             await this.currentElement.play();
             this.isPlaying = true;
-        } catch (error) {
-            window.App?.notify?.(`Play failed: ${error.message}`);
-        }
+        } catch (error) { window.App?.notify?.(`Play failed: ${error.message}`); }
     }
 
     pause() { this.currentElement?.pause(); this.isPlaying = false; }
@@ -68,6 +70,7 @@ class PlayerManager {
         this.currentElement.pause();
         try { this.currentElement.currentTime = 0; } catch (_) {}
         this.isPlaying = false;
+        this.applyClipGain();
         this.updateTimeDisplay();
     }
 
@@ -76,12 +79,14 @@ class PlayerManager {
     setVolume(volume, clip = this.currentClip) {
         const value = this.clamp(Number(volume), 0, 100) / 100;
         if (clip) clip.volume = value;
-        if (this.currentElement) this.currentElement.volume = value;
+        if (this.currentElement && !this.audioContext) this.currentElement.volume = value;
+        this.applyClipGain();
     }
 
     setMute(muted = true, clip = this.currentClip) {
         if (clip) clip.muted = !!muted;
         if (this.currentElement) this.currentElement.muted = !!muted;
+        this.applyClipGain();
     }
 
     toggleMute(clip = this.currentClip) {
@@ -100,16 +105,50 @@ class PlayerManager {
     setGain(gain, clip = this.currentClip) {
         const value = this.clamp(Number(gain), 0, 2);
         if (clip) clip.gain = value;
+        this.applyClipGain();
+    }
+
+    setFadeIn(seconds, clip = this.currentClip) {
+        if (!clip) return;
+        clip.fadeIn = this.clamp(Number(seconds), 0, Math.max(0, clip.duration - 0.05));
+        this.applyClipGain();
+    }
+
+    setFadeOut(seconds, clip = this.currentClip) {
+        if (!clip) return;
+        clip.fadeOut = this.clamp(Number(seconds), 0, Math.max(0, clip.duration - 0.05));
+        this.applyClipGain();
+    }
+
+    getEffectiveGain() {
+        const clip = this.currentClip;
+        if (!clip || clip.muted) return 0;
+        const base = this.clamp(Number(clip.volume ?? 1), 0, 1) * this.clamp(Number(clip.gain ?? 1), 0, 2);
+        const t = this.getCurrentTime();
+        const duration = Number(clip.duration || this.getDuration() || 0);
+        let factor = 1;
+        const fadeIn = Number(clip.fadeIn || 0);
+        const fadeOut = Number(clip.fadeOut || 0);
+        if (fadeIn > 0 && t < fadeIn) factor *= t / fadeIn;
+        if (fadeOut > 0 && duration > 0 && t > duration - fadeOut) factor *= Math.max(0, (duration - t) / fadeOut);
+        return this.clamp(base * factor, 0, 2);
+    }
+
+    applyClipGain() {
+        if (!this.currentElement) return;
+        const value = this.getEffectiveGain();
         const node = this.gainNodes.get(this.currentElement);
         if (node) node.gain.value = value;
+        else this.currentElement.volume = this.clamp(value, 0, 1);
     }
 
     async ensureAudioGraph() {
-        if (!this.currentElement || this.audioContext) return;
+        if (!this.currentElement) return;
+        if (this.sourceNodes.has(this.currentElement)) return;
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (!Ctx) return;
         try {
-            this.audioContext = new Ctx();
+            if (!this.audioContext) this.audioContext = new Ctx();
             const source = this.audioContext.createMediaElementSource(this.currentElement);
             const gain = this.audioContext.createGain();
             const pan = this.audioContext.createStereoPanner ? this.audioContext.createStereoPanner() : null;
@@ -119,18 +158,15 @@ class PlayerManager {
             this.sourceNodes.set(this.currentElement, source);
             this.gainNodes.set(this.currentElement, gain);
             if (pan) this.panNodes.set(this.currentElement, pan);
-        } catch (error) {
-            console.warn('Web Audio graph unavailable:', error);
-        }
+            this.setPan(this.currentClip?.pan ?? 0);
+            this.applyClipGain();
+        } catch (error) { console.warn('Web Audio graph unavailable:', error); }
     }
 
     async enableAudioProcessing() {
         await this.ensureAudioGraph();
         if (this.audioContext?.state === 'suspended') await this.audioContext.resume();
-        if (this.currentClip) {
-            this.setGain(this.currentClip.gain ?? 1);
-            this.setPan(this.currentClip.pan ?? 0);
-        }
+        this.applyClipGain();
     }
 
     setPlaybackRate(rate) {
@@ -142,23 +178,15 @@ class PlayerManager {
     seek(time) {
         if (!this.currentElement) return;
         this.currentElement.currentTime = Math.max(0, Math.min(Number(time) || 0, this.getDuration() || 0));
+        this.applyClipGain();
         this.updateTimeDisplay();
     }
 
     getCurrentTime() { return this.currentElement?.currentTime || 0; }
     getDuration() { return Number.isFinite(this.currentElement?.duration) ? this.currentElement.duration : 0; }
     isElementReady() { return !!this.currentElement && this.currentElement.readyState >= 2; }
-
-    onEnded() {
-        this.isPlaying = false;
-        this.updateTimeDisplay();
-        window.TimelineManager?.onPlaybackEnded?.();
-    }
-
-    handleMediaError() {
-        const error = this.currentElement?.error;
-        if (error) window.App?.notify?.(`Media error (${error.code}). The browser may not support this format.`);
-    }
+    onEnded() { this.isPlaying = false; this.updateTimeDisplay(); window.TimelineManager?.onPlaybackEnded?.(); }
+    handleMediaError() { const error = this.currentElement?.error; if (error) window.App?.notify?.(`Media error (${error.code}). The browser may not support this format.`); }
 
     updateTimeDisplay() {
         const current = document.getElementById('currentTime');
@@ -183,4 +211,6 @@ window.setClipVolume = (v) => window.PlayerManager.setVolume(v);
 window.muteClip = () => window.PlayerManager.toggleMute();
 window.setClipPan = (v) => window.PlayerManager.setPan(v);
 window.setClipGain = (v) => window.PlayerManager.setGain(v);
+window.setClipFadeIn = (v) => window.PlayerManager.setFadeIn(v);
+window.setClipFadeOut = (v) => window.PlayerManager.setFadeOut(v);
 window.enableAudioProcessing = () => window.PlayerManager.enableAudioProcessing();
