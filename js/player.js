@@ -8,29 +8,25 @@ class PlayerManager {
         this.currentClip = null;
         this.isPlaying = false;
         this.playbackRate = 1;
+        this.audioContext = null;
+        this.sourceNodes = new WeakMap();
+        this.gainNodes = new WeakMap();
+        this.panNodes = new WeakMap();
         this.initElements();
     }
 
     initElements() {
-        if (this.videoElement) {
-            this.videoElement.controls = true;
-            this.videoElement.addEventListener('loadedmetadata', () => this.updateTimeDisplay());
-            this.videoElement.addEventListener('timeupdate', () => this.updateTimeDisplay());
-            this.videoElement.addEventListener('ended', () => this.onEnded());
-            this.videoElement.addEventListener('error', () => this.handleMediaError());
-        }
-        if (this.audioElement) {
-            this.audioElement.controls = true;
-            this.audioElement.addEventListener('loadedmetadata', () => this.updateTimeDisplay());
-            this.audioElement.addEventListener('timeupdate', () => this.updateTimeDisplay());
-            this.audioElement.addEventListener('ended', () => this.onEnded());
-            this.audioElement.addEventListener('error', () => this.handleMediaError());
-        }
+        [this.videoElement, this.audioElement].forEach(el => {
+            if (!el) return;
+            el.controls = true;
+            el.addEventListener('loadedmetadata', () => this.updateTimeDisplay());
+            el.addEventListener('timeupdate', () => this.updateTimeDisplay());
+            el.addEventListener('ended', () => this.onEnded());
+            el.addEventListener('error', () => this.handleMediaError());
+        });
     }
 
-    setElementSource(clip) {
-        return this.loadClip(clip);
-    }
+    setElementSource(clip) { return this.loadClip(clip); }
 
     loadCurrentElement() {
         const clip = window.TimelineManager?.getNextClip?.() || window.TimelineManager?.getFirstClip?.();
@@ -41,31 +37,17 @@ class PlayerManager {
         if (!clip?.src) return false;
         this.pause();
         this.currentClip = clip;
-
-        if (clip.type === 'video') {
-            this.currentElement = this.videoElement;
-            if (this.videoElement) {
-                this.videoElement.src = clip.src;
-                this.videoElement.style.display = 'block';
-            }
-            if (this.audioElement) this.audioElement.style.display = 'none';
-        } else {
-            this.currentElement = this.audioElement;
-            if (this.audioElement) {
-                this.audioElement.src = clip.src;
-                this.audioElement.style.display = 'block';
-            }
-            if (this.videoElement) this.videoElement.style.display = 'none';
-        }
-
-        if (this.currentElement) {
-            this.currentElement.playbackRate = clip.playbackRate || this.playbackRate;
-            this.currentElement.volume = Number.isFinite(clip.volume) ? clip.volume : 1;
-            this.currentElement.load();
-            window.App?.notify?.(`Loaded ${clip.name}`);
-            return true;
-        }
-        return false;
+        this.currentElement = clip.type === 'video' ? this.videoElement : this.audioElement;
+        if (!this.currentElement) return false;
+        if (this.videoElement) this.videoElement.style.display = clip.type === 'video' ? 'block' : 'none';
+        if (this.audioElement) this.audioElement.style.display = clip.type === 'audio' ? 'block' : 'none';
+        this.currentElement.src = clip.src;
+        this.currentElement.playbackRate = Number(clip.playbackRate) || this.playbackRate;
+        this.currentElement.volume = clip.muted ? 0 : this.clamp(Number(clip.volume ?? 1), 0, 1);
+        this.currentElement.muted = !!clip.muted;
+        this.currentElement.load();
+        window.App?.notify?.(`Loaded ${clip.name || 'media'}`);
+        return true;
     }
 
     async play() {
@@ -79,10 +61,7 @@ class PlayerManager {
         }
     }
 
-    pause() {
-        this.currentElement?.pause();
-        this.isPlaying = false;
-    }
+    pause() { this.currentElement?.pause(); this.isPlaying = false; }
 
     stop() {
         if (!this.currentElement) return;
@@ -92,9 +71,66 @@ class PlayerManager {
         this.updateTimeDisplay();
     }
 
-    setVolume(volume) {
-        const value = Math.max(0, Math.min(100, Number(volume))) / 100;
+    clamp(value, min, max) { return Math.max(min, Math.min(max, Number.isFinite(value) ? value : min)); }
+
+    setVolume(volume, clip = this.currentClip) {
+        const value = this.clamp(Number(volume), 0, 100) / 100;
+        if (clip) clip.volume = value;
         if (this.currentElement) this.currentElement.volume = value;
+    }
+
+    setMute(muted = true, clip = this.currentClip) {
+        if (clip) clip.muted = !!muted;
+        if (this.currentElement) this.currentElement.muted = !!muted;
+    }
+
+    toggleMute(clip = this.currentClip) {
+        const muted = !(clip?.muted ?? this.currentElement?.muted ?? false);
+        this.setMute(muted, clip);
+        return muted;
+    }
+
+    setPan(pan, clip = this.currentClip) {
+        const value = this.clamp(Number(pan), -1, 1);
+        if (clip) clip.pan = value;
+        const node = this.panNodes.get(this.currentElement);
+        if (node) node.pan.value = value;
+    }
+
+    setGain(gain, clip = this.currentClip) {
+        const value = this.clamp(Number(gain), 0, 2);
+        if (clip) clip.gain = value;
+        const node = this.gainNodes.get(this.currentElement);
+        if (node) node.gain.value = value;
+    }
+
+    async ensureAudioGraph() {
+        if (!this.currentElement || this.audioContext) return;
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        try {
+            this.audioContext = new Ctx();
+            const source = this.audioContext.createMediaElementSource(this.currentElement);
+            const gain = this.audioContext.createGain();
+            const pan = this.audioContext.createStereoPanner ? this.audioContext.createStereoPanner() : null;
+            source.connect(gain);
+            if (pan) { gain.connect(pan); pan.connect(this.audioContext.destination); }
+            else gain.connect(this.audioContext.destination);
+            this.sourceNodes.set(this.currentElement, source);
+            this.gainNodes.set(this.currentElement, gain);
+            if (pan) this.panNodes.set(this.currentElement, pan);
+        } catch (error) {
+            console.warn('Web Audio graph unavailable:', error);
+        }
+    }
+
+    async enableAudioProcessing() {
+        await this.ensureAudioGraph();
+        if (this.audioContext?.state === 'suspended') await this.audioContext.resume();
+        if (this.currentClip) {
+            this.setGain(this.currentClip.gain ?? 1);
+            this.setPan(this.currentClip.pan ?? 0);
+        }
     }
 
     setPlaybackRate(rate) {
@@ -105,8 +141,7 @@ class PlayerManager {
 
     seek(time) {
         if (!this.currentElement) return;
-        const duration = this.getDuration();
-        this.currentElement.currentTime = Math.max(0, Math.min(Number(time) || 0, duration || 0));
+        this.currentElement.currentTime = Math.max(0, Math.min(Number(time) || 0, this.getDuration() || 0));
         this.updateTimeDisplay();
     }
 
@@ -131,9 +166,7 @@ class PlayerManager {
         if (current) current.textContent = this.formatTime(this.getCurrentTime());
         if (total) total.textContent = this.formatTime(this.getDuration());
         const playhead = document.getElementById('playhead');
-        if (playhead && this.getDuration() > 0) {
-            playhead.style.left = `${(this.getCurrentTime() / this.getDuration()) * 100}%`;
-        }
+        if (playhead && this.getDuration() > 0) playhead.style.left = `${(this.getCurrentTime() / this.getDuration()) * 100}%`;
     }
 
     formatTime(seconds) {
@@ -146,3 +179,8 @@ class PlayerManager {
 }
 
 window.PlayerManager = new PlayerManager();
+window.setClipVolume = (v) => window.PlayerManager.setVolume(v);
+window.muteClip = () => window.PlayerManager.toggleMute();
+window.setClipPan = (v) => window.PlayerManager.setPan(v);
+window.setClipGain = (v) => window.PlayerManager.setGain(v);
+window.enableAudioProcessing = () => window.PlayerManager.enableAudioProcessing();
