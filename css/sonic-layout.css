@@ -51,7 +51,8 @@ body { overflow: auto !important; }
 #editorArea > h2, #leftSidebar > h2, #rightSidebar > h2 { color: #fff !important; }
 
 #previewContainer {
-  min-height: 360px !important;
+  min-height: 0 !important;
+  height: 100% !important;
   background: #070a10 !important;
   border: 1px solid var(--sonic-border) !important;
   border-radius: 12px !important;
@@ -60,7 +61,17 @@ body { overflow: auto !important; }
   flex-direction: column !important;
   justify-content: center !important;
 }
-#previewContainer video { max-height: 430px; object-fit: contain; }
+#previewContainer video {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: 16 / 9;
+  object-fit: contain !important;
+  display: block !important;
+  position: relative !important;
+  background: #000;
+}
 #previewContainer audio { margin-top: 10px; }
 
 #timelineWorkspace {
@@ -110,10 +121,66 @@ body { overflow: auto !important; }
   border: 1px solid #293548 !important;
   border-radius: 8px !important;
 }
-.track-content {
+#track-content {
   min-height: 100px !important;
   background: #0c121a !important;
   border: 1px solid #1b2533 !important;
+}
+
+#tracksContainer .track-row {
+  min-height: 74px !important;
+  grid-template-columns: 96px minmax(0, 1fr) !important;
+  gap: 8px !important;
+}
+#tracksContainer .track-header {
+  min-width: 0 !important;
+  padding: 8px !important;
+  gap: 6px !important;
+  justify-content: flex-start !important;
+}
+#tracksContainer .track-header h4 {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-size: 13px !important;
+}
+#tracksContainer .track-header button {
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 24px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 0 !important;
+}
+#tracksContainer .track-header button::after { font-size: 12px; }
+#tracksContainer .track-header .track-mute::after { content: '\1F50A'; }
+#tracksContainer .track-header .track-solo::after { content: 'S'; }
+#tracksContainer .track-header .track-lock::after { content: '\1F512'; }
+#tracksContainer .track-header .track-hide::after { content: '\1F441'; }
+#tracksContainer .track-header button.active { background: var(--sonic-blue) !important; color: #fff !important; }
+#tracksContainer .track-row.track-muted .track-content { opacity: .45; }
+#tracksContainer .track-row.track-hidden .track-content { visibility: hidden; }
+#tracksContainer .track-row.track-locked .track-content { cursor: not-allowed; }
+#tracksContainer .track-content { min-height: 74px !important; }
+#tracksContainer .timeline-clip {
+  top: 8px !important;
+  height: 58px !important;
+  border-radius: 6px !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  padding: 0 10px !important;
+  text-align: left !important;
+}
+#tracksContainer .timeline-clip .clip-name { padding-top: 8px; font-weight: 600; }
+#tracksContainer .timeline-clip .clip-duration { margin-left: auto; padding-top: 8px; opacity: .8; }
+#tracksContainer .timeline-clip .clip-trim-handle {
+  width: 10px !important;
+  min-width: 10px !important;
+  height: 100% !important;
+  margin: 0 -10px !important;
+  background: rgba(255,255,255,.7) !important;
+  cursor: ew-resize !important;
+  z-index: 2;
 }
 
 .timeline-clip {
@@ -166,26 +233,158 @@ body { overflow: auto !important; }
 #sonicInspectorHost > h2 { font-size: 1rem !important; margin: 0 0 10px !important; }
 #sonicInspectorHostBody #siBody { color: var(--sonic-text); }
 #sonicInspectorPanel { width: 100% !important; }
-#sonicInspectorPanel .si-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
-#sonicInspectorPanel section {
+#sonicInspectorHostBody .si-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+#sonicInspectorHostBody section {
   background: #111722;
   border: 1px solid #263142;
   border-radius: 10px;
   padding: 11px;
   margin-bottom: 10px;
 }
-#sonicInspectorPanel h4 { margin: 0 0 8px; color: #fff; }
-#sonicInspectorPanel .si-row { display:block; margin: 9px 0; }
-#sonicInspectorPanel .si-row > span { display:flex; justify-content:space-between; margin-bottom:5px; color:#d8e2ef; font-size:12px; }
-#sonicInspectorPanel output { color:#8ab4ff; }
-#sonicInspectorPanel input[type="range"] { width:100%; }
-#sonicInspectorPanel .si-check { display:flex; gap:7px; align-items:center; font-size:12px; color:#d8e2ef; }
+#sonicInspectorHostBody h4 { margin: 0 0 8px; color: #fff; }
+#sonicInspectorHostBody .si-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin: 12px 0;
+  min-width: 0;
+}
+#sonicInspectorHostBody .si-row > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  color:#d8e2ef;
+  font-size:12px;
+}
+#sonicInspectorHostBody .si-row > span:first-child { overflow-wrap: anywhere; }
+#sonicInspectorHostBody .si-row > input[type="range"] { display: block; width: 100%; min-width: 0; }
+#sonicInspectorHostBody output { color:#8ab4ff; }
+#sonicInspectorHostBody input[type="range"] { width:100%; }
+#sonicInspectorHostBody .si-check { display:flex; gap:7px; align-items:center; font-size:12px; color:#d8e2ef; }
 #sonicInspectorPanel #siReset { width:100%; background:#1b2534; border:1px solid #293548; padding:8px; border-radius:8px; }
 
+#timelineToolbar button,
+.transportControls button,
+#tracksContainer .track-header button { position: relative; }
+#timelineToolbar button::before,
+.transportControls button::before { font-size: 17px; line-height: 1; }
+#timelineToolbar button { font-size: 0 !important; min-width: 38px; }
+#timelineToolbar #timelineZoom { min-width: 120px; }
+#zoomOutBtn::before { content: '-'; }
+#zoomInBtn::before { content: '+'; }
+#splitBtn::before { content: '\2702'; }
+#cutBtn::before { content: '\2702'; }
+#copyBtn::before { content: '\2398'; }
+#pasteBtn::before { content: '\2399'; }
+#duplicateBtn::before { content: '\29C9'; }
+#joinBtn::before { content: '\2194'; }
+#deleteBtn::before { content: '\232B'; }
+#undoBtn::before { content: '\21B6'; }
+#redoBtn::before { content: '\21B7'; }
+.transportControls button { font-size: 0 !important; min-width: 44px; }
+#skipStartBtn::before { content: '\23EE'; }
+#rewindBtn::before { content: '\23EA'; }
+#playBtn::before { content: '\25B6'; }
+#pauseBtn::before { content: '\23F8'; }
+#stopBtn::before { content: '\25A0'; }
+#forwardBtn::before { content: '\23E9'; }
+#skipEndBtn::before { content: '\23ED'; }
+
 @media (max-width: 1100px) {
-  #workspace { grid-template-columns: 220px minmax(0,1fr) 260px !important; }
+  #workspace {
+    grid-template-columns: 180px minmax(0,1fr) 220px !important;
+    flex: 0 0 340px !important;
+    height: 340px !important;
+  }
+  #leftSidebar, #editorArea, #rightSidebar { min-height: 312px !important; }
 }
 @media (max-width: 900px) {
   #workspace { grid-template-columns: 1fr !important; }
   #leftSidebar, #rightSidebar { max-width:none !important; }
 }
+
+html, body { height: 100%; overflow-x: hidden !important; overflow-y: auto !important; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; }
+#app { height: 100vh !important; min-height: 0 !important; }
+#mainContent { height: 100vh !important; min-height: 0 !important; overflow-x: hidden !important; overflow-y: auto !important; }
+#topRibbon { flex: 0 0 auto !important; min-height: 78px !important; }
+#workspace { flex: 1 1 auto !important; min-height: 0 !important; height: auto !important; overflow: hidden !important; }
+#leftSidebar, #editorArea, #rightSidebar { min-height: 0 !important; overflow: auto !important; }
+#editorArea { overflow: hidden !important; }
+#previewContainer { flex: 1 1 auto !important; min-height: 0 !important; height: auto !important; }
+#previewContainer canvas { display: none !important; }
+#previewContainer video:not([src]) { display: none !important; }
+#previewContainer:has(video:not([src]))::after {
+  content: 'Import a video to start editing';
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--sonic-muted);
+  font-size: 14px;
+  letter-spacing: .02em;
+  background: #070a10;
+}
+#mediaDropZone { width: 100% !important; flex: 0 0 auto !important; }
+#timelineWorkspace { flex: 0 0 280px !important; min-height: 0 !important; height: 280px !important; overflow: hidden !important; }
+#timelineToolbar {
+  flex: 0 0 52px !important;
+  flex-wrap: nowrap !important;
+  gap: 10px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+#timelineToolbar .toolbar-group { flex-wrap: nowrap !important; gap: 8px !important; }
+#timelineToolbar button { min-height: 36px !important; padding: 0 12px !important; font-size: 13px !important; white-space: nowrap !important; }
+#timelineToolbar input[type="range"] { width: 140px !important; }
+#timelineRuler { flex: 0 0 42px !important; }
+#tracksContainer { flex: 1 1 auto !important; min-height: 0 !important; overflow: auto !important; }
+#playbackFooter { flex: 0 0 auto !important; }
+#statusBar { flex: 0 0 auto !important; }
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  #workspace {
+    flex: 0 0 440px !important;
+    height: 440px !important;
+    min-height: 440px !important;
+  }
+  #leftSidebar, #editorArea, #rightSidebar { min-height: 412px !important; }
+}
+
+@media (min-width: 1101px) {
+  #workspace {
+    flex: 0 0 420px !important;
+    height: 420px !important;
+    min-height: 420px !important;
+  }
+  #leftSidebar, #editorArea, #rightSidebar { min-height: 392px !important; }
+}
+
+@media (max-width: 900px) {
+  html, body { overflow: auto !important; }
+  #mainContent { height: auto !important; min-height: 100vh !important; overflow: visible !important; }
+  #workspace { flex: 0 0 auto !important; height: auto !important; min-height: 0 !important; grid-template-rows: repeat(3, minmax(280px, auto)) !important; overflow: visible !important; }
+  #leftSidebar, #editorArea, #rightSidebar { min-height: 280px !important; }
+  #timelineWorkspace { height: 280px !important; }
+}
+
+  @media (min-width: 901px) {
+    #timelineWorkspace { flex-basis: 350px !important; height: 350px !important; }
+  }
+
+body > #sonicInspectorPanel { display: none !important; }
+
+/* Keep the icon-only controls icon-only after responsive overrides. */
+#timelineToolbar button:not(#markerBtn),
+.transportControls button,
+#tracksContainer .track-header button {
+  font-size: 0 !important;
+}
+#timelineToolbar button:not(#markerBtn)::before,
+.transportControls button::before,
+#tracksContainer .track-header button::after {
+  font-size: 17px !important;
+}
+#tracksContainer .track-header button::after { font-size: 12px !important; }
