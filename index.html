@@ -186,6 +186,7 @@
     opacity: 1 !important;
   }
 </style>
+<link rel="stylesheet" href="css/sonic-layout.css">
 </head>
 
 <body>
@@ -277,25 +278,26 @@
 <div id="timelineToolbar">
 
 <div class="toolbar-group">
-<button id="zoomOutBtn">-</button>
-<input type="range" id="timelineZoom" min="1" max="500" value="100">
-<button id="zoomInBtn">+</button>
+<button id="zoomOutBtn" title="Zoom out timeline" aria-label="Zoom out timeline">-</button>
+<input type="range" id="timelineZoom" min="1" max="500" value="100" title="Timeline zoom" aria-label="Timeline zoom">
+<button id="zoomInBtn" title="Zoom in timeline" aria-label="Zoom in timeline">+</button>
 </div>
 
 <div class="toolbar-group">
-<button id="splitBtn">Split</button>
-<button id="cutBtn">Cut</button>
-<button id="copyBtn">Copy</button>
-<button id="pasteBtn">Paste</button>
-<button id="duplicateBtn">Duplicate</button>
-<button id="deleteBtn">Delete</button>
-<button id="undoBtn">Undo</button>
-<button id="redoBtn">Redo</button>
+<button id="splitBtn" title="Split clip" aria-label="Split clip">Split</button>
+<button id="cutBtn" title="Cut clip" aria-label="Cut clip">Cut</button>
+<button id="copyBtn" title="Copy clip" aria-label="Copy clip">Copy</button>
+<button id="pasteBtn" title="Paste clip" aria-label="Paste clip">Paste</button>
+<button id="duplicateBtn" title="Duplicate clip" aria-label="Duplicate clip">Duplicate</button>
+<button id="joinBtn" title="Join adjacent clips" aria-label="Join adjacent clips">Join</button>
+<button id="deleteBtn" title="Delete clip" aria-label="Delete clip">Delete</button>
+<button id="undoBtn" title="Undo" aria-label="Undo">Undo</button>
+<button id="redoBtn" title="Redo" aria-label="Redo">Redo</button>
 </div>
 
 <div class="toolbar-group">
 <label><input type="checkbox" id="snapToggle" checked> Snap</label>
-<button id="markerBtn">Add Marker</button>
+<button id="markerBtn" title="Add timeline marker" aria-label="Add timeline marker">Add Marker</button>
 </div>
 
 </div>
@@ -317,9 +319,9 @@
 
 <div class="track-header">
 <h4>Video Track 1</h4>
-<button>Mute</button>
-<button>Lock</button>
-<button>Hide</button>
+<button class="track-mute" title="Mute video track" aria-label="Mute video track">Mute</button>
+<button class="track-lock" title="Lock video track" aria-label="Lock video track">Lock</button>
+<button class="track-hide" title="Hide video track" aria-label="Hide video track">Hide</button>
 </div>
 
 <div class="track-content" id="videoTrack1"></div>
@@ -330,9 +332,9 @@
 
 <div class="track-header">
 <h4>Audio Track 1</h4>
-<button>Mute</button>
-<button>Solo</button>
-<button>Lock</button>
+<button class="track-mute" title="Mute audio track" aria-label="Mute audio track">Mute</button>
+<button class="track-solo" title="Solo audio track" aria-label="Solo audio track">Solo</button>
+<button class="track-lock" title="Lock audio track" aria-label="Lock audio track">Lock</button>
 </div>
 
 <div class="track-content" id="audioTrack1"></div>
@@ -343,9 +345,9 @@
 
 <div class="track-header">
 <h4>Audio Track 2</h4>
-<button>Mute</button>
-<button>Solo</button>
-<button>Lock</button>
+<button class="track-mute" title="Mute audio track" aria-label="Mute audio track">Mute</button>
+<button class="track-solo" title="Solo audio track" aria-label="Solo audio track">Solo</button>
+<button class="track-lock" title="Lock audio track" aria-label="Lock audio track">Lock</button>
 </div>
 
 <div class="track-content" id="audioTrack2"></div>
@@ -360,13 +362,13 @@
 
 <div class="transportControls">
 
-<button id="skipStartBtn">|◀</button>
-<button id="rewindBtn">⏪</button>
-<button id="playBtn">▶</button>
-<button id="pauseBtn">⏸</button>
-<button id="stopBtn">■</button>
-<button id="forwardBtn">⏩</button>
-<button id="skipEndBtn">▶|</button>
+<button id="skipStartBtn" title="Go to start" aria-label="Go to start">|◀</button>
+<button id="rewindBtn" title="Rewind" aria-label="Rewind">⏪</button>
+<button id="playBtn" title="Play" aria-label="Play">▶</button>
+<button id="pauseBtn" title="Pause" aria-label="Pause">⏸</button>
+<button id="stopBtn" title="Stop" aria-label="Stop">■</button>
+<button id="forwardBtn" title="Fast forward" aria-label="Fast forward">⏩</button>
+<button id="skipEndBtn" title="Go to end" aria-label="Go to end">▶|</button>
 
 </div>
 
