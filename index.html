@@ -94,10 +94,6 @@
   #skipEndBtn { display: inline-flex !important; }
   #playbackFooter { position: relative !important; z-index: 10 !important; }
   #statusBar { position: relative !important; z-index: 10 !important; }
-  #effectsWorkspace,
-  #recordingWorkspace,
-  #projectWorkspace,
-  #appearanceWorkspace,
   #clipInspector,
   #exportDialog,
   #shortcutDialog,
@@ -220,6 +216,14 @@
 <main id="workspace" role="main">
 
 <aside id="leftSidebar" aria-labelledby="mediaLibraryHeading">
+
+<nav class="workspaceTools" aria-label="Workspace tools">
+<button type="button" data-workspace="workspace" title="Editor">Editor</button>
+<button type="button" data-workspace="effectsWorkspace" title="Audio and video effects">Effects</button>
+<button type="button" data-workspace="recordingWorkspace" title="Recording tools">Record</button>
+<button type="button" data-workspace="projectWorkspace" title="Project files">Project</button>
+<button type="button" data-workspace="appearanceWorkspace" title="Appearance settings">Appearance</button>
+</nav>
 
 <h2 id="mediaLibraryHeading">Media Library</h2>
 
@@ -433,7 +437,7 @@
 
 <div class="panel audio-effects">
 
-<h2>Audio Effects</h2>
+<div class="tool-panel-heading"><h2>Audio Effects</h2><button type="button" id="closeEffectsBtn" title="Close effects">Close</button></div>
 
 <div class="effect-card"><label>Bass Boost</label><input type="range" id="bassBoost" min="-20" max="20" value="0"></div>
 <div class="effect-card"><label>Treble</label><input type="range" id="trebleBoost" min="-20" max="20" value="0"></div>
