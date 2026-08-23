@@ -188,6 +188,7 @@ class UIManager {
         document.getElementById("copyBtn")?.addEventListener("click", () => window.EditorManager?.copy());
         document.getElementById("pasteBtn")?.addEventListener("click", () => window.EditorManager?.paste());
         document.getElementById("duplicateBtn")?.addEventListener("click", () => window.EditorManager?.duplicate());
+        document.getElementById("joinBtn")?.addEventListener("click", () => window.EditorManager?.join());
         document.getElementById("deleteBtn")?.addEventListener("click", () => window.EditorManager?.delete());
         document.getElementById("undoBtn")?.addEventListener("click", () => window.EditorManager?.undo());
         document.getElementById("redoBtn")?.addEventListener("click", () => window.EditorManager?.redo());
@@ -265,7 +266,7 @@ class UIManager {
             case 'workspace':
                 this.workspace.style.display = 'grid';
                 this.timelineWorkspace.style.display = 'flex';
-                if (window.EditorManager) window.EditorManager.updateTimeline();
+                window.EditorManager?.updateTimeline?.();
                 break;
             case 'projectWorkspace':
                 this.projectWorkspace.style.display = 'block';
