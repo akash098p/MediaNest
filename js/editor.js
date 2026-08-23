@@ -117,13 +117,30 @@ class EditorManager {
         window.App?.notify?.('Clip duplicated');
     }
 
+    join() {
+        const data = this.selectedData();
+        if (!data) return window.App?.notify?.('No clip selected to join');
+        const clips = window.TimelineManager.getClips(data.trackIndex).sort((a, b) => a.startTime - b.startTime);
+        const index = clips.findIndex(clip => clip.id === data.clip.id);
+        const next = clips[index + 1];
+        if (!next || next.startTime > data.clip.endTime + 0.05) return window.App?.notify?.('Select adjacent clips to join');
+        const before = this.snapshot();
+        data.clip.duration = Math.max(data.clip.endTime, next.endTime) - data.clip.startTime;
+        data.clip.endTime = data.clip.startTime + data.clip.duration;
+        window.TimelineManager.removeClip(next.id);
+        window.TimelineManager.updateClipElement(data.el, data.clip);
+        window.TimelineManager.updateTimelineWidth();
+        this.addToHistory('join', before, this.snapshot());
+        window.App?.notify?.('Clips joined');
+    }
+
     split() {
         const data = this.selectedData();
         if (!data) return window.App?.notify?.('No clip selected to split');
         const before = this.snapshot();
         window.TimelineManager.splitSelected();
         const after = this.snapshot();
-        this.addToHistory('split', before, after);
+        if (JSON.stringify(before) !== JSON.stringify(after)) this.addToHistory('split', before, after);
     }
 
     trim() {
@@ -152,5 +169,6 @@ window.copy = () => window.EditorManager.copy();
 window.paste = () => window.EditorManager.paste();
 window.del = () => window.EditorManager.delete();
 window.duplicate = () => window.EditorManager.duplicate();
+window.joinClips = () => window.EditorManager.join();
 window.splitClip = () => window.EditorManager.split();
 window.trimClip = () => window.EditorManager.trim();
