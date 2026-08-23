@@ -213,6 +213,15 @@ class UIManager {
         document.getElementById("trackVolume")?.addEventListener("input", (e) => this.updateCurrentClipProperty('volume', parseFloat(e.target.value) / 100));
         document.getElementById("trackPan")?.addEventListener("input", (e) => this.updateCurrentClipProperty('pan', parseFloat(e.target.value) / 100));
 
+        document.getElementById('trimVideoBtn')?.addEventListener('click', () => window.EditorManager?.trim?.());
+        document.getElementById('rotateVideoBtn')?.addEventListener('click', () => this.adjustSelectedClip('rotation', 90));
+        document.getElementById('resizeVideoBtn')?.addEventListener('click', () => this.showWorkspace('appearanceWorkspace'));
+        document.getElementById('removeAudioBtn')?.addEventListener('click', () => this.adjustSelectedClip('removeAudio', true));
+        document.getElementById('cropVideoBtn')?.addEventListener('click', () => this.notify('Use Position, Scale, and Aspect ratio in the Inspector to crop the selected clip'));
+        document.getElementById('mergeVideoBtn')?.addEventListener('click', () => window.EditorManager?.join?.());
+        document.getElementById('compressVideoBtn')?.addEventListener('click', () => this.notify('Compression is applied during Export'));
+        document.getElementById('convertVideoBtn')?.addEventListener('click', () => this.showModal('exportDialog'));
+
         // Project workspace buttons
         document.getElementById("exportProjectBtn")?.addEventListener("click", () => this.showModal('exportDialog'));
         document.getElementById("importProjectBtn")?.addEventListener("click", () => this.loadProjectFromFile());
@@ -639,6 +648,17 @@ class UIManager {
             clip[property] = value;
             window.App?.notify?.(`${property} updated to: ${value}`);
         }
+    }
+
+    adjustSelectedClip(property, value) {
+        const element = document.querySelector('.timeline-clip.selected');
+        const clip = element && window.TimelineManager?.getClips?.().find(item => item.id === element.id);
+        if (!clip) return this.notify('Select a clip first');
+        if (property === 'rotation') clip.rotation = (Number(clip.rotation) || 0) + value;
+        if (property === 'removeAudio') clip.removeAudio = value;
+        window.InspectorManager?.render?.();
+        window.InspectorManager?.applyTransform?.(clip);
+        this.notify(property === 'rotation' ? `Rotation: ${clip.rotation} degrees` : 'Audio removed from selected video');
     }
 
     onMediaLoaded() {
