@@ -43,18 +43,34 @@ class TimelineManager {
             button.addEventListener('click', event => {
                 event.stopPropagation();
                 const row = button.closest('.track-row');
-            const trackIndex = [...document.querySelectorAll('#tracksContainer .track-row')].indexOf(row);
-            const track = this.tracks[trackIndex];
+                const trackIndex = [...document.querySelectorAll('#tracksContainer .track-row')].indexOf(row);
+                const track = this.tracks[trackIndex];
                 if (!row || !track) return;
-                const action = button.textContent.trim().toLowerCase();
-                if (action.includes('mute')) track.muted = !track.muted;
-                if (action.includes('lock')) track.locked = !track.locked;
-                if (action.includes('hide')) track.hidden = !track.hidden;
-                if (action.includes('solo')) track.solo = !track.solo;
+                const action = button.className;
+                if (action.includes('track-mute')) track.muted = !track.muted;
+                if (action.includes('track-lock')) track.locked = !track.locked;
+                if (action.includes('track-hide')) track.hidden = !track.hidden;
+                if (action.includes('track-solo')) track.solo = !track.solo;
                 row.classList.toggle('track-muted', !!track.muted);
                 row.classList.toggle('track-locked', !!track.locked);
                 row.classList.toggle('track-hidden', !!track.hidden);
-                button.classList.toggle('active', ['muted', 'locked', 'hidden', 'solo'].some(key => track[key] && action.includes(key.slice(0, -1))));
+                const stateKey = action.includes('track-mute') ? 'muted' : action.includes('track-lock') ? 'locked' : action.includes('track-hide') ? 'hidden' : 'solo';
+                button.classList.toggle('active', !!track[stateKey]);
+                if (action.includes('track-lock')) {
+                    button.textContent = track.locked ? 'Unlock' : 'Lock';
+                    button.title = `${track.locked ? 'Unlock' : 'Lock'} ${track.type} track`;
+                    button.setAttribute('aria-label', button.title);
+                }
+                if (action.includes('track-hide')) {
+                    button.textContent = track.hidden ? 'Show' : 'Hide';
+                    button.title = `${track.hidden ? 'Show' : 'Hide'} ${track.type} track`;
+                    button.setAttribute('aria-label', button.title);
+                }
+                if (action.includes('track-mute')) {
+                    button.textContent = track.muted ? 'Unmute' : 'Mute';
+                    button.title = `${track.muted ? 'Unmute' : 'Mute'} ${track.type} track`;
+                    button.setAttribute('aria-label', button.title);
+                }
             });
         });
     }
@@ -196,6 +212,10 @@ class TimelineManager {
     }
 
     onTrimMouseDown(e, clip, trackIndex, side) {
+        if (this.tracks[trackIndex]?.locked || e.currentTarget.closest('.track-row')?.classList.contains('track-locked')) {
+            window.App?.notify?.('Track is locked');
+            return;
+        }
         e.preventDefault();
         e.stopPropagation();
         this.selectClip(clip.id);
