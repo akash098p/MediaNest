@@ -52,12 +52,12 @@ class App {
         this.initializedManagers.storage = new StorageManager();
         window.NotificationManager = this.initializedManagers.notification;
         window.StorageManager = this.initializedManagers.storage;
-        this.initializedManagers.player = new PlayerManager();
-        this.initializedManagers.timeline = new TimelineManager();
-        this.initializedManagers.editor = new EditorManager();
-        this.initializedManagers.effects = new EffectsManager();
-        this.initializedManagers.recorder = new RecorderManager();
-        this.initializedManagers.export = new ExportManager();
+        this.initializedManagers.player = window.PlayerManager || new PlayerManager();
+        this.initializedManagers.timeline = window.TimelineManager || new TimelineManager();
+        this.initializedManagers.editor = window.EditorManager || new EditorManager();
+        this.initializedManagers.effects = window.EffectsManager || new EffectsManager();
+        this.initializedManagers.recorder = window.RecorderManager || new RecorderManager();
+        this.initializedManagers.export = window.ExportManager || new ExportManager();
         window.PlayerManager = this.initializedManagers.player;
         window.TimelineManager = this.initializedManagers.timeline;
         window.EditorManager = this.initializedManagers.editor;
@@ -109,6 +109,7 @@ class App {
             const project = this.initializedManagers.storage.load('lastProject');
             if (project?.clips?.length) {
                 this.initializedManagers.timeline.displayClips(project.clips);
+                project.clips.forEach(clip => this.initializedManagers.ui?.addClipToLibrary?.(clip));
                 this.notify(`Loaded last project (${project.clips.length} clips)`);
             }
         } catch (error) {
