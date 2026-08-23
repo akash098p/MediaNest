@@ -1,0 +1,191 @@
+/* SonicStudio visual refresh - reference-inspired professional editor layout */
+:root {
+  --sonic-bg: #0a0e16;
+  --sonic-panel: #10151f;
+  --sonic-panel-2: #151b26;
+  --sonic-border: #242d3a;
+  --sonic-text: #f3f6fb;
+  --sonic-muted: #9aa5b5;
+  --sonic-blue: #2f7df6;
+  --sonic-blue-2: #4a90ff;
+  --sonic-green: #22c55e;
+  --sonic-purple: #8b5cf6;
+}
+
+html, body { background: var(--sonic-bg) !important; color: var(--sonic-text) !important; }
+body { overflow: auto !important; }
+#loadingScreen { background: var(--sonic-bg) !important; }
+#mainContent { background: var(--sonic-bg) !important; }
+
+#topRibbon {
+  background: #0b0f16 !important;
+  border-bottom: 1px solid var(--sonic-border) !important;
+  padding: 14px 20px !important;
+}
+.brand h1 { color: #fff !important; letter-spacing: -0.02em; }
+.brand p { color: var(--sonic-muted) !important; }
+.mainMenu button {
+  background: var(--sonic-panel-2) !important;
+  border: 1px solid var(--sonic-border) !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  padding: 9px 16px !important;
+}
+.mainMenu button:hover { background: #1a2230 !important; border-color: #334155 !important; }
+
+#workspace {
+  grid-template-columns: 300px minmax(0,1fr) 320px !important;
+  gap: 14px !important;
+  padding: 14px !important;
+  background: var(--sonic-bg) !important;
+}
+#leftSidebar, #editorArea, #rightSidebar {
+  background: var(--sonic-panel) !important;
+  border: 1px solid var(--sonic-border) !important;
+  border-radius: 14px !important;
+  padding: 14px !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,.18);
+}
+#leftSidebar, #rightSidebar { gap: 14px !important; }
+#editorArea { padding: 10px !important; }
+#editorArea > h2, #leftSidebar > h2, #rightSidebar > h2 { color: #fff !important; }
+
+#previewContainer {
+  min-height: 360px !important;
+  background: #070a10 !important;
+  border: 1px solid var(--sonic-border) !important;
+  border-radius: 12px !important;
+  padding: 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+#previewContainer video { max-height: 430px; object-fit: contain; }
+#previewContainer audio { margin-top: 10px; }
+
+#timelineWorkspace {
+  margin: 0 14px 14px !important;
+  padding: 10px 12px 14px !important;
+  background: var(--sonic-panel) !important;
+  border: 1px solid var(--sonic-border) !important;
+  border-radius: 14px !important;
+}
+#timelineToolbar {
+  background: #0d121a !important;
+  border: 1px solid var(--sonic-border) !important;
+  border-radius: 10px !important;
+  padding: 8px !important;
+}
+#timelineToolbar button {
+  background: #1b2534 !important;
+  border: 1px solid #293548 !important;
+  color: #eef4ff !important;
+  border-radius: 9px !important;
+  min-height: 36px;
+}
+#timelineToolbar button:hover { background: #263246 !important; }
+#timelineRuler {
+  margin-top: 8px;
+  background: #0c1118 !important;
+  border: 1px solid var(--sonic-border) !important;
+  border-radius: 8px !important;
+}
+#tracksContainer {
+  background: #0b1017 !important;
+  border: 1px solid var(--sonic-border) !important;
+  border-radius: 10px !important;
+  padding: 8px !important;
+  gap: 10px !important;
+}
+.track-row { grid-template-columns: 150px minmax(0,1fr) !important; gap: 10px !important; }
+.track-header {
+  background: #111722 !important;
+  border: 1px solid #263142 !important;
+  border-radius: 10px !important;
+  padding: 10px !important;
+}
+.track-header h4 { color: #fff !important; }
+.track-header button {
+  background: #1a2330 !important;
+  border: 1px solid #293548 !important;
+  border-radius: 8px !important;
+}
+.track-content {
+  min-height: 100px !important;
+  background: #0c121a !important;
+  border: 1px solid #1b2533 !important;
+}
+
+.timeline-clip {
+  border-radius: 8px !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  overflow: hidden !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+}
+.timeline-clip.video { background: linear-gradient(180deg,#7546d7,#5934a5) !important; }
+.timeline-clip.audio { background: linear-gradient(180deg,#139a50,#0d7440) !important; }
+.timeline-clip.selected { outline: 2px solid var(--sonic-blue) !important; outline-offset: -2px; }
+.clip-trim-handle { background: rgba(255,255,255,.7) !important; }
+
+#playbackFooter {
+  margin: 0 14px 8px !important;
+  background: #0c1118 !important;
+  border: 1px solid var(--sonic-border) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+}
+.transportControls button {
+  background: #1a2230 !important;
+  border: 1px solid #2a3546 !important;
+  border-radius: 9px !important;
+}
+#playBtn { background: var(--sonic-blue) !important; border-color: var(--sonic-blue) !important; color: white !important; }
+.timeDisplay { color: #dce6f5 !important; font-variant-numeric: tabular-nums; }
+#statusBar {
+  margin: 0 14px 12px !important;
+  background: #0c1118 !important;
+  border: 1px solid var(--sonic-border) !important;
+  border-radius: 8px !important;
+  padding: 9px 12px !important;
+}
+
+#mediaDropZone {
+  min-height: 90px !important;
+  padding: 14px !important;
+  border: 1px dashed #37598e !important;
+  background: #0e1622 !important;
+  border-radius: 10px !important;
+}
+#mediaDropZone:hover, #mediaDropZone:focus-within { background: #121d2c !important; }
+
+#sonicInspectorHost {
+  display: block !important;
+  background: transparent !important;
+  color: var(--sonic-text) !important;
+}
+#sonicInspectorHost > h2 { font-size: 1rem !important; margin: 0 0 10px !important; }
+#sonicInspectorHostBody #siBody { color: var(--sonic-text); }
+#sonicInspectorPanel { width: 100% !important; }
+#sonicInspectorPanel .si-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+#sonicInspectorPanel section {
+  background: #111722;
+  border: 1px solid #263142;
+  border-radius: 10px;
+  padding: 11px;
+  margin-bottom: 10px;
+}
+#sonicInspectorPanel h4 { margin: 0 0 8px; color: #fff; }
+#sonicInspectorPanel .si-row { display:block; margin: 9px 0; }
+#sonicInspectorPanel .si-row > span { display:flex; justify-content:space-between; margin-bottom:5px; color:#d8e2ef; font-size:12px; }
+#sonicInspectorPanel output { color:#8ab4ff; }
+#sonicInspectorPanel input[type="range"] { width:100%; }
+#sonicInspectorPanel .si-check { display:flex; gap:7px; align-items:center; font-size:12px; color:#d8e2ef; }
+#sonicInspectorPanel #siReset { width:100%; background:#1b2534; border:1px solid #293548; padding:8px; border-radius:8px; }
+
+@media (max-width: 1100px) {
+  #workspace { grid-template-columns: 220px minmax(0,1fr) 260px !important; }
+}
+@media (max-width: 900px) {
+  #workspace { grid-template-columns: 1fr !important; }
+  #leftSidebar, #rightSidebar { max-width:none !important; }
+}
