@@ -125,8 +125,13 @@ class UIManager {
     }
 
     initEventListeners() {
+        document.querySelectorAll('.workspaceTools [data-workspace]').forEach(button => {
+            button.addEventListener('click', () => button.dataset.workspace === 'effectsWorkspace' ? this.toggleEffectsDrawer() : this.showWorkspace(button.dataset.workspace));
+        });
+        document.getElementById('closeEffectsBtn')?.addEventListener('click', () => this.closeEffectsDrawer());
+
         // Workspace navigation
-        document.getElementById("newProject")?.addEventListener("click", () => this.showWorkspace('workspace'));
+        document.getElementById("newProject")?.addEventListener("click", () => this.startNewProject());
         document.getElementById("openProject")?.addEventListener("click", () => this.showWorkspace('projectWorkspace'));
         document.getElementById("saveProject")?.addEventListener("click", () => this.saveProject());
         document.getElementById("saveAs")?.addEventListener("click", () => this.saveProject());
@@ -252,36 +257,72 @@ class UIManager {
     }
 
     showWorkspace(workspaceName) {
+        document.querySelectorAll('.workspaceTools [data-workspace]').forEach(button => {
+            button.classList.toggle('active', button.dataset.workspace === workspaceName);
+        });
         // Hide all workspaces
-        this.workspace.style.display = 'none';
-        this.timelineWorkspace.style.display = 'none';
-        this.effectsWorkspace.style.display = 'none';
-        this.recordingWorkspace.style.display = 'none';
-        this.projectWorkspace.style.display = 'none';
-        this.appearanceWorkspace.style.display = 'none';
-        this.clipInspector.style.display = 'none';
+        [this.workspace, this.timelineWorkspace, this.effectsWorkspace, this.recordingWorkspace, this.projectWorkspace, this.appearanceWorkspace, this.clipInspector].forEach(section => {
+            section?.classList.add('workspace-view-hidden');
+            section?.classList.remove('workspace-view-active');
+        });
 
         // Show selected workspace
         switch (workspaceName) {
             case 'workspace':
-                this.workspace.style.display = 'grid';
-                this.timelineWorkspace.style.display = 'flex';
+                this.workspace.classList.remove('workspace-view-hidden');
+                this.workspace.classList.add('workspace-view-active');
+                this.timelineWorkspace.classList.remove('workspace-view-hidden');
+                this.timelineWorkspace.classList.add('workspace-view-active');
                 window.EditorManager?.updateTimeline?.();
                 break;
             case 'projectWorkspace':
-                this.projectWorkspace.style.display = 'block';
+                this.projectWorkspace.classList.remove('workspace-view-hidden');
+                this.projectWorkspace.classList.add('workspace-view-active');
                 break;
             case 'appearanceWorkspace':
-                this.appearanceWorkspace.style.display = 'block';
+                this.appearanceWorkspace.classList.remove('workspace-view-hidden');
+                this.appearanceWorkspace.classList.add('workspace-view-active');
                 break;
             case 'effectsWorkspace':
-                this.effectsWorkspace.style.display = 'block';
-                if (window.EffectsManager) window.EffectsManager.updateUI();
+                this.effectsWorkspace.classList.remove('workspace-view-hidden');
+                this.effectsWorkspace.classList.add('workspace-view-active');
+                window.EffectsManager?.updateUI?.();
                 break;
             case 'recordingWorkspace':
-                this.recordingWorkspace.style.display = 'block';
+                this.recordingWorkspace.classList.remove('workspace-view-hidden');
+                this.recordingWorkspace.classList.add('workspace-view-active');
                 break;
         }
+    }
+
+    startNewProject() {
+        window.PlayerManager?.stop?.();
+        window.TimelineManager?.clearClips?.();
+        const recentFiles = document.getElementById('recentFiles');
+        if (recentFiles) recentFiles.innerHTML = '';
+        const video = document.getElementById('videoPreview');
+        const audio = document.getElementById('audioPreview');
+        if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
+        if (audio) { audio.pause(); audio.removeAttribute('src'); audio.load(); }
+        window.StorageManager?.deleteProject?.('lastProject');
+        this.showWorkspace('workspace');
+        window.App?.notify?.('New project created');
+    }
+
+    toggleEffectsDrawer() {
+        const drawer = this.effectsWorkspace;
+        if (drawer?.classList.contains('workspace-view-active')) this.closeEffectsDrawer();
+        else {
+            drawer?.classList.remove('workspace-view-hidden');
+            drawer?.classList.add('workspace-view-active', 'effects-drawer-open');
+            document.querySelector('.workspaceTools [data-workspace="effectsWorkspace"]')?.classList.add('active');
+        }
+    }
+
+    closeEffectsDrawer() {
+        this.effectsWorkspace?.classList.remove('workspace-view-active', 'effects-drawer-open');
+        this.effectsWorkspace?.classList.add('workspace-view-hidden');
+        document.querySelector('.workspaceTools [data-workspace="effectsWorkspace"]')?.classList.remove('active');
     }
 
     showModal(modalId) {
