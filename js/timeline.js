@@ -7,6 +7,66 @@ class TimelineManager {
         this.clipCounter = 0;
         this.pixelsPerSecond = 50;
         this.initTracks();
+        this.renderRuler();
+        this.bindTimelineControls();
+    }
+
+    bindTimelineControls() {
+        const ruler = document.getElementById('timelineRuler');
+        ruler?.addEventListener('click', event => {
+            if (event.target.closest('.frame')) {
+                const rect = ruler.getBoundingClientRect();
+                const time = Math.max(0, (event.clientX - rect.left + ruler.scrollLeft) / this.pixelsPerSecond);
+                window.PlayerManager?.seek?.(time);
+                this.updatePlayheadFromTime(time);
+            }
+        });
+        document.getElementById('timelineZoom')?.addEventListener('input', event => {
+            this.pixelsPerSecond = Math.max(10, Number(event.target.value) / 2);
+            this.renderRuler();
+            this.getClips().forEach(clip => {
+                const element = document.getElementById(clip.id);
+                if (element) this.updateClipElement(element, clip);
+            });
+            this.updateTimelineWidth();
+        });
+        document.querySelectorAll('#tracksContainer .track-content').forEach(content => {
+            content.addEventListener('click', event => {
+                if (event.target.closest('.timeline-clip')) return;
+                const rect = content.getBoundingClientRect();
+                const time = Math.max(0, (event.clientX - rect.left + content.scrollLeft) / this.pixelsPerSecond);
+                window.PlayerManager?.seek?.(time);
+                this.updatePlayheadFromTime(time);
+            });
+        });
+        document.querySelectorAll('#tracksContainer .track-header button').forEach(button => {
+            button.addEventListener('click', event => {
+                event.stopPropagation();
+                const row = button.closest('.track-row');
+            const trackIndex = [...document.querySelectorAll('#tracksContainer .track-row')].indexOf(row);
+            const track = this.tracks[trackIndex];
+                if (!row || !track) return;
+                const action = button.textContent.trim().toLowerCase();
+                if (action.includes('mute')) track.muted = !track.muted;
+                if (action.includes('lock')) track.locked = !track.locked;
+                if (action.includes('hide')) track.hidden = !track.hidden;
+                if (action.includes('solo')) track.solo = !track.solo;
+                row.classList.toggle('track-muted', !!track.muted);
+                row.classList.toggle('track-locked', !!track.locked);
+                row.classList.toggle('track-hidden', !!track.hidden);
+                button.classList.toggle('active', ['muted', 'locked', 'hidden', 'solo'].some(key => track[key] && action.includes(key.slice(0, -1))));
+            });
+        });
+    }
+
+    renderRuler() {
+        const ruler = document.getElementById('frameNumbers');
+        if (!ruler) return;
+        ruler.innerHTML = Array.from({ length: 31 }, (_, index) => {
+            const seconds = index * 5;
+            const label = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+            return `<div class="frame"><span>${label}</span></div>`;
+        }).join('');
     }
 
     initTracks() {
@@ -85,6 +145,11 @@ class TimelineManager {
         if (duration) duration.textContent = this.formatTime(clip.duration);
     }
 
+    updatePlayheadFromTime(time) {
+        const duration = window.PlayerManager?.getDuration?.() || 0;
+        if (duration > 0) this.updatePlayhead((time / duration) * 100);
+    }
+
     selectClip(clipId) {
         document.querySelectorAll('.timeline-clip').forEach(el => el.classList.toggle('selected', el.id === clipId));
         const clip = this.getClips().find(c => c.id === clipId);
@@ -97,6 +162,11 @@ class TimelineManager {
 
     onClipMouseDown(e, clip, trackIndex) {
         if (e.button !== 0) return;
+        const row = e.currentTarget.closest('.track-row');
+        if (row?.classList.contains('track-locked')) {
+            window.App?.notify?.('Track is locked');
+            return;
+        }
         e.preventDefault();
         this.selectClip(clip.id);
         const startX = e.clientX;
@@ -104,14 +174,18 @@ class TimelineManager {
         const el = e.currentTarget;
         const before = this.snapshotTracks();
         const onMove = ev => {
+            if (row?.classList.contains('track-locked')) return;
             const delta = (ev.clientX - startX) / this.pixelsPerSecond;
-            clip.startTime = Math.max(0, originalStart + delta);
+            const nextStart = Math.max(0, originalStart + delta);
+            const snap = document.getElementById('snapToggle')?.checked;
+            clip.startTime = snap ? Math.round(nextStart * 10) / 10 : nextStart;
             clip.endTime = clip.startTime + clip.duration;
             this.updateClipElement(el, clip);
         };
         const onUp = () => {
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
+            if (row?.classList.contains('track-locked')) return;
             this.normalizeTrack(trackIndex);
             this.updateTimelineWidth();
             const after = this.snapshotTracks();
@@ -185,7 +259,10 @@ class TimelineManager {
         if (!el) return window.App?.notify?.('No clip selected to split');
         const clip = this.getClips().find(c => c.id === el.id);
         if (!clip || clip.duration < 0.1) return;
-        const at = window.PlayerManager?.getCurrentTime?.() || (clip.startTime + clip.duration / 2);
+        const currentTime = window.PlayerManager?.getCurrentTime?.() || 0;
+        const at = currentTime > clip.startTime && currentTime < clip.endTime
+            ? currentTime
+            : clip.startTime + clip.duration / 2;
         const splitAt = Math.max(clip.startTime + 0.05, Math.min(at, clip.endTime - 0.05));
         const firstDuration = splitAt - clip.startTime;
         const second = { ...clip, id: `clip-${Date.now()}-${this.clipCounter++}`, startTime: splitAt, duration: clip.duration - firstDuration, endTime: clip.endTime };
