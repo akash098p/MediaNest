@@ -12,6 +12,7 @@ class PlayerManager {
         this.sourceNodes = new WeakMap();
         this.gainNodes = new WeakMap();
         this.panNodes = new WeakMap();
+        this.effectNodes = new WeakMap();
         this.fadeFrame = null;
         this.timelinePosition = 0;
         this.timelineTimer = null;
@@ -175,13 +176,20 @@ class PlayerManager {
             const source = this.audioContext.createMediaElementSource(this.currentElement);
             const gain = this.audioContext.createGain();
             const pan = this.audioContext.createStereoPanner ? this.audioContext.createStereoPanner() : null;
-            source.connect(gain);
-            if (pan) { gain.connect(pan); pan.connect(this.audioContext.destination); }
-            else gain.connect(this.audioContext.destination);
+            const bass = this.audioContext.createBiquadFilter();
+            const treble = this.audioContext.createBiquadFilter();
+            const compressor = this.audioContext.createDynamicsCompressor();
+            bass.type = 'lowshelf'; bass.frequency.value = 180;
+            treble.type = 'highshelf'; treble.frequency.value = 3500;
+            source.connect(bass); bass.connect(treble); treble.connect(gain); gain.connect(compressor);
+            if (pan) { compressor.connect(pan); pan.connect(this.audioContext.destination); }
+            else compressor.connect(this.audioContext.destination);
             this.sourceNodes.set(this.currentElement, source);
             this.gainNodes.set(this.currentElement, gain);
             if (pan) this.panNodes.set(this.currentElement, pan);
+            this.effectNodes.set(this.currentElement, { bass, treble, compressor });
             this.setPan(this.currentClip?.pan ?? 0);
+            this.applyEffects();
             this.applyClipGain();
         } catch (error) { console.warn('Web Audio graph unavailable:', error); }
     }
@@ -196,6 +204,16 @@ class PlayerManager {
         this.playbackRate = Number(rate) || 1;
         if (this.currentElement) this.currentElement.playbackRate = this.playbackRate;
         if (this.currentClip) this.currentClip.playbackRate = this.playbackRate;
+    }
+
+    applyEffects() {
+        const nodes = this.effectNodes.get(this.currentElement);
+        const effects = window.EffectsManager;
+        if (!nodes || !effects) return;
+        nodes.bass.gain.value = Number(effects.bassBoost) || 0;
+        nodes.treble.gain.value = Number(effects.trebleBoost) || 0;
+        nodes.compressor.threshold.value = Number(effects.compressorThreshold ?? -24);
+        nodes.compressor.ratio.value = Number(effects.compressorRatio ?? 4);
     }
 
     seek(time) {
