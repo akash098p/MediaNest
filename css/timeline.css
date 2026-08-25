@@ -2,2011 +2,1601 @@
 TIMELINE ROOT
 =========================================================*/
 
-#timelineWorkspace{
+#timelineWorkspace {
+  position: relative;
 
-position:relative;
+  width: 100%;
 
-width:100%;
+  height: 280px;
 
-height:280px;
+  background: #141922;
 
-background:#141922;
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  border-top: 1px solid #2a3242;
 
-border-top:1px solid #2A3242;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
-
 
 /*=========================================================
 TIMELINE TOOLBAR
 =========================================================*/
 
-#timelineToolbar{
+#timelineToolbar {
+  height: 55px;
 
-height:55px;
+  display: flex;
 
-display:flex;
+  justify-content: space-between;
 
-justify-content:space-between;
+  align-items: center;
 
-align-items:center;
+  padding: 0 20px;
 
-padding:0 20px;
+  background: #1a1f2a;
 
-background:#1A1F2A;
-
-border-bottom:1px solid #2D3444;
-
+  border-bottom: 1px solid #2d3444;
 }
 
-.toolbar-group{
+.toolbar-group {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
-
-gap:12px;
-
+  gap: 12px;
 }
 
-.toolbar-group button{
+.toolbar-group button {
+  height: 38px;
 
-height:38px;
+  padding: 0 18px;
 
-padding:0 18px;
+  background: #2d3444;
 
-background:#2D3444;
+  color: white;
 
-color:white;
+  border: none;
 
-border:none;
+  border-radius: 10px;
 
-border-radius:10px;
+  cursor: pointer;
 
-cursor:pointer;
+  transition: 0.25s;
 
-transition:.25s;
+  font-size: 14px;
 
-font-size:14px;
-
-font-weight:600;
-
+  font-weight: 600;
 }
 
-.toolbar-group button:hover{
+.toolbar-group button:hover {
+  background: #4f7cff;
 
-background:#4F7CFF;
-
-transform:translateY(-2px);
-
+  transform: translateY(-2px);
 }
-
 
 /*=========================================================
 TIMELINE RULER
 =========================================================*/
 
-#timelineRuler{
+#timelineRuler {
+  position: relative;
 
-position:relative;
+  height: 42px;
 
-height:42px;
+  background: #10151d;
 
-background:#10151D;
+  border-bottom: 1px solid #2a3242;
 
-border-bottom:1px solid #2A3242;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
-
 
 /*=========================================================
 FRAME NUMBERS
 =========================================================*/
 
-#frameNumbers{
+#frameNumbers {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  top: 0;
 
-top:0;
+  display: flex;
 
-display:flex;
+  height: 100%;
 
-height:100%;
-
-min-width:5000px;
-
+  min-width: 5000px;
 }
 
-.frame{
+.frame {
+  width: 80px;
 
-width:80px;
+  height: 100%;
 
-height:100%;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 
-border-left:1px solid rgba(255,255,255,.08);
-
-position:relative;
-
+  position: relative;
 }
 
-.frame span{
+.frame span {
+  position: absolute;
 
-position:absolute;
+  top: 6px;
 
-top:6px;
+  left: 6px;
 
-left:6px;
+  font-size: 11px;
 
-font-size:11px;
-
-color:#8892A8;
-
+  color: #8892a8;
 }
-
 
 /*=========================================================
 MINOR GRID
 =========================================================*/
 
-.frame::after{
+.frame::after {
+  content: "";
 
-content:"";
+  position: absolute;
 
-position:absolute;
+  right: 0;
 
-right:0;
+  top: 18px;
 
-top:18px;
+  bottom: 0;
 
-bottom:0;
+  width: 1px;
 
-width:1px;
-
-background:rgba(255,255,255,.04);
-
+  background: rgba(255, 255, 255, 0.04);
 }
-
 
 /*=========================================================
 PLAYHEAD
 =========================================================*/
 
-#playhead{
+#playhead {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 2px;
 
-width:2px;
+  background: #ff4d4d;
 
-background:#FF4D4D;
+  z-index: 9999;
 
-z-index:9999;
-
-pointer-events:none;
-
+  pointer-events: none;
 }
 
-#playhead::before{
+#playhead::before {
+  content: "";
 
-content:"";
+  position: absolute;
 
-position:absolute;
+  top: -7px;
 
-top:-7px;
+  left: -6px;
 
-left:-6px;
+  width: 14px;
 
-width:14px;
+  height: 14px;
 
-height:14px;
+  background: #ff4d4d;
 
-background:#FF4D4D;
+  transform: rotate(45deg);
 
-transform:rotate(45deg);
-
-box-shadow:0 0 12px rgba(255,77,77,.4);
-
+  box-shadow: 0 0 12px rgba(255, 77, 77, 0.4);
 }
-
 
 /*=========================================================
 TRACK CONTAINER
 =========================================================*/
 
-#tracksContainer{
+#tracksContainer {
+  flex: 1;
 
-flex:1;
+  overflow: auto;
 
-overflow:auto;
-
-background:#131821;
-
+  background: #131821;
 }
-
 
 /*=========================================================
 TRACK ROW
 =========================================================*/
 
-.track-row{
+.track-row {
+  display: grid;
 
-display:grid;
+  grid-template-columns: 220px 1fr;
 
-grid-template-columns:220px 1fr;
+  min-height: 90px;
 
-min-height:90px;
-
-border-bottom:1px solid rgba(255,255,255,.05);
-
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-
 
 /*=========================================================
 TRACK HEADER
 =========================================================*/
 
-.track-header{
+.track-header {
+  background: #1b202b;
 
-background:#1B202B;
+  padding: 15px;
 
-padding:15px;
+  border-right: 1px solid #2a3242;
 
-border-right:1px solid #2A3242;
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  justify-content: center;
 
-justify-content:center;
-
-gap:10px;
-
+  gap: 10px;
 }
 
-.track-header h4{
+.track-header h4 {
+  font-size: 15px;
 
-font-size:15px;
-
-color:white;
-
+  color: white;
 }
 
-.track-header button{
+.track-header button {
+  padding: 6px 10px;
 
-padding:6px 10px;
+  border: none;
 
-border:none;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 8px;
 
-border-radius:8px;
+  color: white;
 
-color:white;
+  cursor: pointer;
 
-cursor:pointer;
-
-transition:.25s;
-
+  transition: 0.25s;
 }
 
-.track-header button:hover{
-
-background:#4F7CFF;
-
+.track-header button:hover {
+  background: #4f7cff;
 }
-
 
 /*=========================================================
 TRACK CONTENT
 =========================================================*/
 
-.track-content{
+.track-content {
+  position: relative;
 
-position:relative;
+  background-image: linear-gradient(
+    to right,
 
-background-image:
+    rgba(255, 255, 255, 0.05) 1px,
 
-linear-gradient(
+    transparent 1px
+  );
 
-to right,
+  background-size: 80px 100%;
 
-rgba(255,255,255,.05) 1px,
-
-transparent 1px);
-
-background-size:80px 100%;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
-
 
 /*=========================================================
 TRACK GRID
 =========================================================*/
 
-.track-content::before{
+.track-content::before {
+  content: "";
 
-content:"";
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  top: 0;
 
-top:0;
+  right: 0;
 
-right:0;
+  bottom: 0;
 
-bottom:0;
+  background-image: linear-gradient(
+    to bottom,
 
-background-image:
+    transparent 89px,
 
-linear-gradient(
+    rgba(255, 255, 255, 0.04) 90px
+  );
 
-to bottom,
-
-transparent 89px,
-
-rgba(255,255,255,.04) 90px);
-
-pointer-events:none;
-
+  pointer-events: none;
 }
-
 
 /*=========================================================
 TIMELINE SCROLLBAR
 =========================================================*/
 
-#tracksContainer::-webkit-scrollbar{
+#tracksContainer::-webkit-scrollbar {
+  height: 12px;
 
-height:12px;
-
-width:12px;
-
+  width: 12px;
 }
 
-#tracksContainer::-webkit-scrollbar-thumb{
+#tracksContainer::-webkit-scrollbar-thumb {
+  background: #3a455b;
 
-background:#3A455B;
-
-border-radius:20px;
-
+  border-radius: 20px;
 }
 
-#tracksContainer::-webkit-scrollbar-track{
-
-background:#171C26;
-
+#tracksContainer::-webkit-scrollbar-track {
+  background: #171c26;
 }
-
 
 /*=========================================================
 TIMELINE ZOOM
 =========================================================*/
 
-#timelineZoom{
+#timelineZoom {
+  width: 180px;
 
-width:180px;
+  cursor: pointer;
 
-cursor:pointer;
-
-accent-color:#4F7CFF;
-
+  accent-color: #4f7cff;
 }
-
 
 /*=========================================================
 TIME INDICATOR
 =========================================================*/
 
-#timeIndicator{
+#timeIndicator {
+  font-family: Consolas, monospace;
 
-font-family:Consolas, monospace;
+  font-size: 14px;
 
-font-size:14px;
+  font-weight: 600;
 
-font-weight:600;
+  color: white;
 
-color:white;
+  padding: 8px 14px;
 
-padding:8px 14px;
+  background: #2d3444;
 
-background:#2D3444;
-
-border-radius:10px;
-
+  border-radius: 10px;
 }
-
 
 /*=========================================================
 SNAP INDICATOR
 =========================================================*/
 
-.snap-indicator{
+.snap-indicator {
+  position: absolute;
 
-position:absolute;
+  width: 2px;
 
-width:2px;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  background: #00d9ff;
 
-background:#00D9FF;
+  display: none;
 
-display:none;
-
-pointer-events:none;
-
+  pointer-events: none;
 }
-
 
 /*=========================================================
 SELECTION AREA
 =========================================================*/
 
-.timeline-selection{
+.timeline-selection {
+  position: absolute;
 
-position:absolute;
+  background: rgba(0, 217, 255, 0.12);
 
-background:rgba(0,217,255,.12);
+  border: 2px dashed #00d9ff;
 
-border:2px dashed #00D9FF;
-
-display:none;
-
+  display: none;
 }
-
 
 /*=========================================================
 CURSOR STATES
 =========================================================*/
 
-.timeline-moving{
-
-cursor:grab;
-
+.timeline-moving {
+  cursor: grab;
 }
 
-.timeline-resizing{
-
-cursor:ew-resize;
-
+.timeline-resizing {
+  cursor: ew-resize;
 }
 
-.timeline-selecting{
-
-cursor:crosshair;
-
+.timeline-selecting {
+  cursor: crosshair;
 }
-
 
 /*=========================================================
 TIMELINE CLIP BASE
 =========================================================*/
 
-.timeline-clip{
+.timeline-clip {
+  position: absolute;
 
-position:absolute;
+  top: 14px;
 
-top:14px;
+  height: 62px;
 
-height:62px;
+  border-radius: 12px;
 
-border-radius:12px;
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  overflow: hidden;
 
-overflow:hidden;
+  cursor: pointer;
 
-cursor:pointer;
+  user-select: none;
 
-user-select:none;
+  transition: 0.2s;
 
-transition:.2s;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
 
-box-shadow:
-
-0 8px 18px rgba(0,0,0,.28);
-
-border:2px solid transparent;
-
+  border: 2px solid transparent;
 }
 
-.timeline-clip:hover{
+.timeline-clip:hover {
+  transform: translateY(-2px);
 
-transform:translateY(-2px);
-
-box-shadow:
-
-0 15px 30px rgba(0,0,0,.35);
-
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.35);
 }
 
-.timeline-clip.selected{
+.timeline-clip.selected {
+  border-color: #00d9ff;
 
-border-color:#00D9FF;
-
-box-shadow:
-
-0 0 18px rgba(0,217,255,.35);
-
+  box-shadow: 0 0 18px rgba(0, 217, 255, 0.35);
 }
-
 
 /*=========================================================
 VIDEO CLIP
 =========================================================*/
 
-.video-clip{
+.video-clip {
+  background: linear-gradient(135deg, #4f7cff, #315cff);
 
-background:
-
-linear-gradient(
-
-135deg,
-
-#4F7CFF,
-
-#315CFF);
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 AUDIO CLIP
 =========================================================*/
 
-.audio-clip{
+.audio-clip {
+  background: linear-gradient(135deg, #14c38e, #0aa572);
 
-background:
-
-linear-gradient(
-
-135deg,
-
-#14C38E,
-
-#0AA572);
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 IMAGE CLIP
 =========================================================*/
 
-.image-clip{
+.image-clip {
+  background: linear-gradient(135deg, #a259ff, #7a42f4);
 
-background:
-
-linear-gradient(
-
-135deg,
-
-#A259FF,
-
-#7A42F4);
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 CLIP HEADER
 =========================================================*/
 
-.clip-header{
+.clip-header {
+  height: 24px;
 
-height:24px;
+  width: 100%;
 
-width:100%;
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  justify-content: space-between;
 
-justify-content:space-between;
+  padding: 0 12px;
 
-padding:0 12px;
+  background: rgba(0, 0, 0, 0.15);
 
-background:rgba(0,0,0,.15);
+  font-size: 12px;
 
-font-size:12px;
-
-font-weight:600;
-
+  font-weight: 600;
 }
-
 
 /*=========================================================
 CLIP BODY
 =========================================================*/
 
-.clip-body{
+.clip-body {
+  flex: 1;
 
-flex:1;
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  padding: 0 12px;
 
-padding:0 12px;
-
-gap:10px;
-
+  gap: 10px;
 }
-
 
 /*=========================================================
 CLIP ICON
 =========================================================*/
 
-.clip-icon{
+.clip-icon {
+  width: 22px;
 
-width:22px;
+  height: 22px;
 
-height:22px;
+  display: flex;
 
-display:flex;
+  justify-content: center;
 
-justify-content:center;
+  align-items: center;
 
-align-items:center;
-
-font-size:14px;
-
+  font-size: 14px;
 }
-
 
 /*=========================================================
 CLIP TITLE
 =========================================================*/
 
-.clip-title{
+.clip-title {
+  font-size: 13px;
 
-font-size:13px;
+  font-weight: 600;
 
-font-weight:600;
+  white-space: nowrap;
 
-white-space:nowrap;
+  overflow: hidden;
 
-overflow:hidden;
-
-text-overflow:ellipsis;
-
+  text-overflow: ellipsis;
 }
-
 
 /*=========================================================
 CLIP DURATION
 =========================================================*/
 
-.clip-duration{
+.clip-duration {
+  font-size: 11px;
 
-font-size:11px;
+  opacity: 0.8;
 
-opacity:.8;
-
-margin-left:auto;
-
+  margin-left: auto;
 }
-
 
 /*=========================================================
 VIDEO THUMBNAILS
 =========================================================*/
 
-.clip-thumbnails{
+.clip-thumbnails {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  top: 24px;
 
-top:24px;
+  bottom: 0;
 
-bottom:0;
+  display: flex;
 
-display:flex;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
 
-.clip-thumbnail{
+.clip-thumbnail {
+  flex: 1;
 
-flex:1;
+  background-size: cover;
 
-background-size:cover;
+  background-position: center;
 
-background-position:center;
-
-border-right:1px solid rgba(255,255,255,.08);
-
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
-
 
 /*=========================================================
 AUDIO WAVEFORM
 =========================================================*/
 
-.clip-waveform{
+.clip-waveform {
+  position: absolute;
 
-position:absolute;
+  left: 8px;
 
-left:8px;
+  right: 8px;
 
-right:8px;
+  bottom: 8px;
 
-bottom:8px;
+  height: 26px;
 
-height:26px;
+  display: flex;
 
-display:flex;
+  align-items: flex-end;
 
-align-items:flex-end;
-
-gap:2px;
-
+  gap: 2px;
 }
 
-.clip-waveform span{
+.clip-waveform span {
+  flex: 1;
 
-flex:1;
+  background: rgba(255, 255, 255, 0.85);
 
-background:rgba(255,255,255,.85);
+  border-radius: 4px;
 
-border-radius:4px;
-
-min-height:4px;
-
+  min-height: 4px;
 }
-
 
 /*=========================================================
 CLIP HANDLES
 =========================================================*/
 
-.clip-handle{
+.clip-handle {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  width: 10px;
 
-width:10px;
+  height: 100%;
 
-height:100%;
+  cursor: ew-resize;
 
-cursor:ew-resize;
+  background: rgba(255, 255, 255, 0.22);
 
-background:rgba(255,255,255,.22);
-
-transition:.2s;
-
+  transition: 0.2s;
 }
 
-.clip-handle:hover{
-
-background:rgba(255,255,255,.45);
-
+.clip-handle:hover {
+  background: rgba(255, 255, 255, 0.45);
 }
 
-.clip-handle.left{
+.clip-handle.left {
+  left: 0;
 
-left:0;
-
-border-radius:12px 0 0 12px;
-
+  border-radius: 12px 0 0 12px;
 }
 
-.clip-handle.right{
+.clip-handle.right {
+  right: 0;
 
-right:0;
-
-border-radius:0 12px 12px 0;
-
+  border-radius: 0 12px 12px 0;
 }
-
 
 /*=========================================================
 FADE HANDLES
 =========================================================*/
 
-.fade-handle{
+.fade-handle {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  width: 20px;
 
-width:20px;
+  height: 100%;
 
-height:100%;
-
-pointer-events:auto;
-
+  pointer-events: auto;
 }
 
-.fade-in{
+.fade-in {
+  left: 10px;
 
-left:10px;
-
-background:
-
-linear-gradient(
-
-90deg,
-
-rgba(255,255,255,.25),
-
-transparent);
-
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.25), transparent);
 }
 
-.fade-out{
+.fade-out {
+  right: 10px;
 
-right:10px;
-
-background:
-
-linear-gradient(
-
-270deg,
-
-rgba(255,255,255,.25),
-
-transparent);
-
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.25), transparent);
 }
-
 
 /*=========================================================
 TRANSITIONS
 =========================================================*/
 
-.transition-overlay{
+.transition-overlay {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 40px;
 
-width:40px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
 
-background:
-
-linear-gradient(
-
-90deg,
-
-transparent,
-
-rgba(255,255,255,.4),
-
-transparent);
-
-pointer-events:none;
-
+  pointer-events: none;
 }
-
 
 /*=========================================================
 MULTI SELECT
 =========================================================*/
 
-.timeline-clip.multi-selected{
+.timeline-clip.multi-selected {
+  outline: 2px dashed #ffd43b;
 
-outline:2px dashed #FFD43B;
-
-outline-offset:3px;
-
+  outline-offset: 3px;
 }
-
 
 /*=========================================================
 GROUPED CLIPS
 =========================================================*/
 
-.clip-group{
+.clip-group {
+  position: absolute;
 
-position:absolute;
+  border: 2px dashed rgba(255, 255, 255, 0.15);
 
-border:2px dashed rgba(255,255,255,.15);
+  border-radius: 14px;
 
-border-radius:14px;
-
-pointer-events:none;
-
+  pointer-events: none;
 }
-
 
 /*=========================================================
 KEYFRAME LANE
 =========================================================*/
 
-.keyframe-lane{
+.keyframe-lane {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  bottom: 0;
 
-bottom:0;
+  height: 18px;
 
-height:18px;
+  background: rgba(0, 0, 0, 0.08);
 
-background:rgba(0,0,0,.08);
-
-border-top:1px solid rgba(255,255,255,.08);
-
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
-
 
 /*=========================================================
 KEYFRAME
 =========================================================*/
 
-.keyframe{
+.keyframe {
+  position: absolute;
 
-position:absolute;
+  width: 10px;
 
-width:10px;
+  height: 10px;
 
-height:10px;
+  background: #ffd43b;
 
-background:#FFD43B;
+  transform: rotate(45deg);
 
-transform:rotate(45deg);
+  margin-top: 4px;
 
-margin-top:4px;
+  cursor: pointer;
 
-cursor:pointer;
-
-transition:.2s;
-
+  transition: 0.2s;
 }
 
-.keyframe:hover{
-
-transform:
-
-rotate(45deg)
-
-scale(1.2);
-
+.keyframe:hover {
+  transform: rotate(45deg) scale(1.2);
 }
-
 
 /*=========================================================
 RIPPLE EDIT GUIDE
 =========================================================*/
 
-.ripple-guide{
+.ripple-guide {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 2px;
 
-width:2px;
+  background: #ff9800;
 
-background:#FF9800;
+  pointer-events: none;
 
-pointer-events:none;
-
-display:none;
-
+  display: none;
 }
-
 
 /*=========================================================
 DROP TARGET
 =========================================================*/
 
-.clip-drop-target{
+.clip-drop-target {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 4px;
 
-width:4px;
+  background: #00d9ff;
 
-background:#00D9FF;
-
-display:none;
-
+  display: none;
 }
-
 
 /*=========================================================
 MARQUEE SELECT
 =========================================================*/
 
-.marquee-select{
+.marquee-select {
+  position: absolute;
 
-position:absolute;
+  border: 2px dashed #00d9ff;
 
-border:2px dashed #00D9FF;
+  background: rgba(0, 217, 255, 0.08);
 
-background:rgba(0,217,255,.08);
-
-pointer-events:none;
-
+  pointer-events: none;
 }
-
 
 /*=========================================================
 DRAG GHOST
 =========================================================*/
 
-.drag-ghost{
+.drag-ghost {
+  opacity: 0.65;
 
-opacity:.65;
+  transform: rotate(-2deg);
 
-transform:rotate(-2deg);
-
-filter:brightness(1.1);
-
+  filter: brightness(1.1);
 }
-
 
 /*=========================================================
 LOCKED TRACK
 =========================================================*/
 
-.track-locked{
+.track-locked {
+  opacity: 0.45;
 
-opacity:.45;
+  pointer-events: none;
 
-pointer-events:none;
-
-filter:grayscale(1);
-
+  filter: grayscale(1);
 }
-
 
 /*=========================================================
 MUTED TRACK
 =========================================================*/
 
-.track-muted{
-
-opacity:.6;
-
+.track-muted {
+  opacity: 0.6;
 }
-
 
 /*=========================================================
 SOLO TRACK
 =========================================================*/
 
-.track-solo{
-
-box-shadow:
-
-inset 0 0 0 2px #FFD43B;
-
+.track-solo {
+  box-shadow: inset 0 0 0 2px #ffd43b;
 }
-
 
 /*=========================================================
 MULTI TRACK LANES
 =========================================================*/
 
-.track-lane{
+.track-lane {
+  position: relative;
 
-position:relative;
+  min-height: 90px;
 
-min-height:90px;
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
-border-bottom:1px solid rgba(255,255,255,.05);
+  background: #171c26;
 
-background:#171C26;
-
-transition:.25s;
-
+  transition: 0.25s;
 }
 
-.track-lane:nth-child(even){
-
-background:#151A23;
-
+.track-lane:nth-child(even) {
+  background: #151a23;
 }
 
-.track-lane:hover{
-
-background:#1B2130;
-
+.track-lane:hover {
+  background: #1b2130;
 }
-
 
 /*=========================================================
 FRAME GRID
 =========================================================*/
 
-.timeline-grid{
+.timeline-grid {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  pointer-events: none;
 
-pointer-events:none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to right, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
 
-background-image:
-
-linear-gradient(to right,
-rgba(255,255,255,.03) 1px,
-transparent 1px),
-
-linear-gradient(to right,
-rgba(255,255,255,.07) 1px,
-transparent 1px);
-
-background-size:
-
-20px 100%,
-100px 100%;
-
+  background-size:
+    20px 100%,
+    100px 100%;
 }
-
 
 /*=========================================================
 SECOND MARKERS
 =========================================================*/
 
-.time-marker{
+.time-marker {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 1px;
 
-width:1px;
-
-background:rgba(255,255,255,.10);
-
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.time-marker span{
+.time-marker span {
+  position: absolute;
 
-position:absolute;
+  top: 4px;
 
-top:4px;
+  left: 5px;
 
-left:5px;
+  font-size: 11px;
 
-font-size:11px;
+  color: #8d99ae;
 
-color:#8D99AE;
-
-font-family:Consolas, monospace;
-
+  font-family: Consolas, monospace;
 }
-
 
 /*=========================================================
 PLAYHEAD GLOW
 =========================================================*/
 
-#playhead{
-
-box-shadow:
-
-0 0 10px rgba(255,77,77,.6),
-
-0 0 25px rgba(255,77,77,.4),
-
-0 0 45px rgba(255,77,77,.2);
-
+#playhead {
+  box-shadow:
+    0 0 10px rgba(255, 77, 77, 0.6),
+    0 0 25px rgba(255, 77, 77, 0.4),
+    0 0 45px rgba(255, 77, 77, 0.2);
 }
-
 
 /*=========================================================
 CURRENT FRAME LABEL
 =========================================================*/
 
-.current-frame{
+.current-frame {
+  position: absolute;
 
-position:absolute;
+  top: -24px;
 
-top:-24px;
+  left: -28px;
 
-left:-28px;
+  background: #ff4d4d;
 
-background:#FF4D4D;
+  padding: 4px 10px;
 
-padding:4px 10px;
+  border-radius: 8px;
 
-border-radius:8px;
+  font-size: 11px;
 
-font-size:11px;
+  font-weight: 600;
 
-font-weight:600;
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 SNAP GUIDE
 =========================================================*/
 
-.snap-guide{
+.snap-guide {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 2px;
 
-width:2px;
+  background: #00d9ff;
 
-background:#00D9FF;
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.6);
 
-box-shadow:
+  display: none;
 
-0 0 15px rgba(0,217,255,.6);
-
-display:none;
-
-z-index:2000;
-
+  z-index: 2000;
 }
-
 
 /*=========================================================
 AUTOMATION LANE
 =========================================================*/
 
-.automation-lane{
+.automation-lane {
+  position: relative;
 
-position:relative;
+  height: 60px;
 
-height:60px;
+  background: #121720;
 
-background:#121720;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 
-border-top:1px solid rgba(255,255,255,.05);
-
-overflow:hidden;
-
+  overflow: hidden;
 }
-
 
 /*=========================================================
 AUTOMATION CURVE
 =========================================================*/
 
-.automation-curve{
+.automation-curve {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
-
-pointer-events:none;
-
+  pointer-events: none;
 }
-
 
 /*=========================================================
 AUTOMATION POINT
 =========================================================*/
 
-.automation-point{
+.automation-point {
+  position: absolute;
 
-position:absolute;
+  width: 10px;
 
-width:10px;
+  height: 10px;
 
-height:10px;
+  background: #00d9ff;
 
-background:#00D9FF;
+  border-radius: 50%;
 
-border-radius:50%;
+  cursor: pointer;
 
-cursor:pointer;
-
-transition:.2s;
-
+  transition: 0.2s;
 }
 
-.automation-point:hover{
-
-transform:scale(1.35);
-
+.automation-point:hover {
+  transform: scale(1.35);
 }
-
 
 /*=========================================================
 VOLUME ENVELOPE
 =========================================================*/
 
-.volume-envelope{
+.volume-envelope {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  height: 2px;
 
-height:2px;
+  background: #14c38e;
 
-background:#14C38E;
-
-top:50%;
-
+  top: 50%;
 }
-
 
 /*=========================================================
 PAN ENVELOPE
 =========================================================*/
 
-.pan-envelope{
+.pan-envelope {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  height: 2px;
 
-height:2px;
+  background: #ffd43b;
 
-background:#FFD43B;
-
-top:50%;
-
+  top: 50%;
 }
-
 
 /*=========================================================
 TRACK METERS
 =========================================================*/
 
-.track-meter{
+.track-meter {
+  position: absolute;
 
-position:absolute;
+  right: 15px;
 
-right:15px;
+  top: 50%;
 
-top:50%;
+  transform: translateY(-50%);
 
-transform:translateY(-50%);
+  width: 8px;
 
-width:8px;
+  height: 55px;
 
-height:55px;
+  border-radius: 20px;
 
-border-radius:20px;
+  background: #2b3242;
 
-background:#2B3242;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
 
-.track-meter-fill{
+.track-meter-fill {
+  position: absolute;
 
-position:absolute;
+  bottom: 0;
 
-bottom:0;
+  width: 100%;
 
-width:100%;
+  height: 40%;
 
-height:40%;
+  background: linear-gradient(
+    to top,
 
-background:
-
-linear-gradient(
-
-to top,
-
-#14C38E,
-
-#FFD43B,
-
-#E74C3C);
-
+    #14c38e,
+    #ffd43b,
+    #e74c3c
+  );
 }
-
 
 /*=========================================================
 CLIP SHADOW
 =========================================================*/
 
-.timeline-clip{
-
-filter:
-
-drop-shadow(
-
-0 8px 18px rgba(0,0,0,.28));
-
+.timeline-clip {
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.28));
 }
-
 
 /*=========================================================
 CLIP RESIZE PREVIEW
 =========================================================*/
 
-.resize-preview{
+.resize-preview {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  background: rgba(79, 124, 255, 0.15);
 
-background:rgba(79,124,255,.15);
+  border: 2px dashed #4f7cff;
 
-border:2px dashed #4F7CFF;
-
-pointer-events:none;
-
+  pointer-events: none;
 }
-
 
 /*=========================================================
 MAGNET SNAP
 =========================================================*/
 
-.magnet-highlight{
+.magnet-highlight {
+  outline: 2px solid #00d9ff;
 
-outline:2px solid #00D9FF;
-
-outline-offset:3px;
-
+  outline-offset: 3px;
 }
-
 
 /*=========================================================
 TRACK SEPARATOR
 =========================================================*/
 
-.track-separator{
+.track-separator {
+  height: 1px;
 
-height:1px;
-
-background:
-
-linear-gradient(
-
-90deg,
-
-transparent,
-
-rgba(255,255,255,.10),
-
-transparent);
-
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
 }
-
 
 /*=========================================================
 ZOOM LEVELS
 =========================================================*/
 
-.zoom-50 .timeline-grid{
-
-background-size:40px 100%,200px 100%;
-
+.zoom-50 .timeline-grid {
+  background-size:
+    40px 100%,
+    200px 100%;
 }
 
-.zoom-100 .timeline-grid{
-
-background-size:20px 100%,100px 100%;
-
+.zoom-100 .timeline-grid {
+  background-size:
+    20px 100%,
+    100px 100%;
 }
 
-.zoom-200 .timeline-grid{
-
-background-size:10px 100%,50px 100%;
-
+.zoom-200 .timeline-grid {
+  background-size:
+    10px 100%,
+    50px 100%;
 }
 
-.zoom-400 .timeline-grid{
-
-background-size:5px 100%,25px 100%;
-
+.zoom-400 .timeline-grid {
+  background-size:
+    5px 100%,
+    25px 100%;
 }
-
 
 /*=========================================================
 TRACK LABELS
 =========================================================*/
 
-.track-label{
+.track-label {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  gap: 10px;
 
-gap:10px;
+  font-size: 13px;
 
-font-size:13px;
-
-font-weight:600;
-
+  font-weight: 600;
 }
-
 
 /*=========================================================
 GPU OPTIMIZATION
 =========================================================*/
 
 .timeline-clip,
-
 .track-lane,
-
 .playhead,
+.track-content {
+  will-change: transform, opacity;
 
-.track-content{
+  transform: translateZ(0);
 
-will-change:
-
-transform,
-
-opacity;
-
-transform:
-
-translateZ(0);
-
-backface-visibility:hidden;
-
+  backface-visibility: hidden;
 }
-
 
 /*=========================================================
 SMOOTH SCROLLING
 =========================================================*/
 
-#tracksContainer{
-
-scroll-behavior:smooth;
-
+#tracksContainer {
+  scroll-behavior: smooth;
 }
-
 
 /*=========================================================
 TIMELINE BACKGROUND
 =========================================================*/
 
-.timeline-background{
-
-background:
-
-linear-gradient(
-
-180deg,
-
-#181D28,
-
-#121720);
-
+.timeline-background {
+  background: linear-gradient(180deg, #181d28, #121720);
 }
-
 
 /*=========================================================
 DRAG & DROP STATES
 =========================================================*/
 
-.timeline-dragging{
-cursor:grabbing;
+.timeline-dragging {
+  cursor: grabbing;
 }
 
-.drag-preview{
-position:absolute;
-opacity:.75;
-transform:rotate(-2deg);
-pointer-events:none;
-z-index:5000;
-filter:brightness(1.1);
+.drag-preview {
+  position: absolute;
+  opacity: 0.75;
+  transform: rotate(-2deg);
+  pointer-events: none;
+  z-index: 5000;
+  filter: brightness(1.1);
 }
 
-.drop-zone{
-position:absolute;
-top:0;
-bottom:0;
-width:4px;
-background:#00D9FF;
-box-shadow:0 0 18px rgba(0,217,255,.6);
-display:none;
-z-index:3000;
+.drop-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #00d9ff;
+  box-shadow: 0 0 18px rgba(0, 217, 255, 0.6);
+  display: none;
+  z-index: 3000;
 }
-
 
 /*=========================================================
 RIPPLE EDIT
 =========================================================*/
 
-.ripple-overlay{
-position:absolute;
-top:0;
-bottom:0;
-background:rgba(255,152,0,.15);
-border:2px dashed #FF9800;
-pointer-events:none;
+.ripple-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 152, 0, 0.15);
+  border: 2px dashed #ff9800;
+  pointer-events: none;
 }
 
-.ripple-arrow{
-position:absolute;
-width:28px;
-height:28px;
-border-radius:50%;
-background:#FF9800;
-display:flex;
-align-items:center;
-justify-content:center;
-color:#fff;
-font-size:14px;
+.ripple-arrow {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ff9800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
 }
-
 
 /*=========================================================
 CLIP TRANSITIONS
 =========================================================*/
 
-.clip-transition{
-position:absolute;
-top:0;
-bottom:0;
-width:36px;
-background:linear-gradient(
-90deg,
-transparent,
-rgba(255,255,255,.35),
-transparent);
-pointer-events:none;
+.clip-transition {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 36px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  pointer-events: none;
 }
 
-.transition-fade{
-background:linear-gradient(
-90deg,
-transparent,
-rgba(255,255,255,.45));
+.transition-fade {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45));
 }
 
-.transition-crossfade{
-background:linear-gradient(
-90deg,
-rgba(255,255,255,.25),
-rgba(255,255,255,.55),
-rgba(255,255,255,.25));
+.transition-crossfade {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.25),
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.25)
+  );
 }
-
 
 /*=========================================================
 VIDEO THUMBNAIL STRIP
 =========================================================*/
 
-.thumbnail-strip{
-display:flex;
-height:100%;
-overflow:hidden;
+.thumbnail-strip {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
 }
 
-.thumbnail-strip img{
-width:80px;
-height:100%;
-object-fit:cover;
-border-right:1px solid rgba(255,255,255,.08);
+.thumbnail-strip img {
+  width: 80px;
+  height: 100%;
+  object-fit: cover;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
-
 
 /*=========================================================
 LIVE WAVEFORM
 =========================================================*/
 
-.waveform-track{
-position:absolute;
-left:0;
-right:0;
-bottom:0;
-height:34px;
-display:flex;
-align-items:flex-end;
-gap:1px;
-padding:0 6px 6px;
+.waveform-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34px;
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  padding: 0 6px 6px;
 }
 
-.waveform-track span{
-flex:1;
-background:rgba(255,255,255,.9);
-border-radius:3px;
-min-height:3px;
+.waveform-track span {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 3px;
+  min-height: 3px;
 }
-
 
 /*=========================================================
 MARKERS
 =========================================================*/
 
-.timeline-marker{
-position:absolute;
-top:0;
-bottom:0;
-width:2px;
-background:#FFD43B;
-z-index:4000;
+.timeline-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ffd43b;
+  z-index: 4000;
 }
 
-.timeline-marker::before{
-content:"";
-position:absolute;
-top:0;
-left:-5px;
-width:12px;
-height:12px;
-background:#FFD43B;
-transform:rotate(45deg);
+.timeline-marker::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 12px;
+  height: 12px;
+  background: #ffd43b;
+  transform: rotate(45deg);
 }
 
-.marker-label{
-position:absolute;
-top:16px;
-left:8px;
-padding:4px 8px;
-background:#FFD43B;
-color:#111;
-font-size:11px;
-font-weight:600;
-border-radius:6px;
-white-space:nowrap;
+.marker-label {
+  position: absolute;
+  top: 16px;
+  left: 8px;
+  padding: 4px 8px;
+  background: #ffd43b;
+  color: #111;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  white-space: nowrap;
 }
-
 
 /*=========================================================
 IN / OUT POINTS
 =========================================================*/
 
 .in-point,
-.out-point{
-
-position:absolute;
-top:0;
-bottom:0;
-width:3px;
-background:#00D9FF;
-z-index:3000;
-
+.out-point {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #00d9ff;
+  z-index: 3000;
 }
 
 .in-point::before,
-.out-point::before{
-
-content:"";
-position:absolute;
-top:-8px;
-left:-6px;
-width:15px;
-height:15px;
-background:inherit;
-border-radius:50%;
-
+.out-point::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: -6px;
+  width: 15px;
+  height: 15px;
+  background: inherit;
+  border-radius: 50%;
 }
-
 
 /*=========================================================
 EXPORT RANGE
 =========================================================*/
 
-.export-range{
-
-position:absolute;
-top:0;
-bottom:0;
-background:rgba(79,124,255,.12);
-border:2px solid #4F7CFF;
-pointer-events:none;
-
+.export-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(79, 124, 255, 0.12);
+  border: 2px solid #4f7cff;
+  pointer-events: none;
 }
-
 
 /*=========================================================
 PLAYBACK REGION
 =========================================================*/
 
-.playback-region{
-
-position:absolute;
-top:0;
-bottom:0;
-background:rgba(20,195,142,.12);
-
+.playback-region {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(20, 195, 142, 0.12);
 }
-
 
 /*=========================================================
 ACTIVE TRACK
 =========================================================*/
 
-.track-active{
-
-box-shadow:
-inset 4px 0 #4F7CFF;
-
+.track-active {
+  box-shadow: inset 4px 0 #4f7cff;
 }
-
 
 /*=========================================================
 TRACK RECORD
 =========================================================*/
 
-.track-record{
-
-box-shadow:
-inset 4px 0 #E74C3C;
-
+.track-record {
+  box-shadow: inset 4px 0 #e74c3c;
 }
-
 
 /*=========================================================
 TRACK SOLO
 =========================================================*/
 
-.track-solo{
-
-box-shadow:
-inset 4px 0 #FFD43B;
-
+.track-solo {
+  box-shadow: inset 4px 0 #ffd43b;
 }
-
 
 /*=========================================================
 TRACK MUTE
 =========================================================*/
 
-.track-muted{
-
-opacity:.55;
-
+.track-muted {
+  opacity: 0.55;
 }
-
 
 /*=========================================================
 TIMELINE FPS LABEL
 =========================================================*/
 
-.timeline-fps{
-
-font-size:12px;
-font-family:Consolas, monospace;
-color:#98A2B3;
-padding:0 10px;
-
+.timeline-fps {
+  font-size: 12px;
+  font-family: Consolas, monospace;
+  color: #98a2b3;
+  padding: 0 10px;
 }
-
 
 /*=========================================================
 AUTO SCROLL
 =========================================================*/
 
-.timeline-autoscroll{
-
-scroll-behavior:smooth;
-
+.timeline-autoscroll {
+  scroll-behavior: smooth;
 }
-
 
 /*=========================================================
 RESPONSIVE
 =========================================================*/
 
-@media (max-width:1024px){
+@media (max-width: 1024px) {
+  .track-row {
+    grid-template-columns: 180px 1fr;
+  }
 
-.track-row{
-
-grid-template-columns:180px 1fr;
-
+  .track-header {
+    padding: 10px;
+  }
 }
 
-.track-header{
+@media (max-width: 768px) {
+  #timelineToolbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 12px;
+  }
 
-padding:10px;
+  .toolbar-group {
+    flex-wrap: wrap;
+  }
 
+  .track-row {
+    grid-template-columns: 140px 1fr;
+  }
+
+  .timeline-clip {
+    height: 56px;
+  }
 }
 
+@media (max-width: 480px) {
+  .track-row {
+    grid-template-columns: 100px 1fr;
+  }
+
+  .track-header h4 {
+    font-size: 12px;
+  }
+
+  .toolbar-group button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
 }
-
-@media (max-width:768px){
-
-#timelineToolbar{
-
-flex-wrap:wrap;
-height:auto;
-padding:12px;
-
-}
-
-.toolbar-group{
-
-flex-wrap:wrap;
-
-}
-
-.track-row{
-
-grid-template-columns:140px 1fr;
-
-}
-
-.timeline-clip{
-
-height:56px;
-
-}
-
-}
-
-@media (max-width:480px){
-
-.track-row{
-
-grid-template-columns:100px 1fr;
-
-}
-
-.track-header h4{
-
-font-size:12px;
-
-}
-
-.toolbar-group button{
-
-padding:8px 12px;
-font-size:12px;
-
-}
-
-}
-
 
 /*=========================================================
 PERFORMANCE
@@ -2016,11 +1606,8 @@ PERFORMANCE
 .track-content,
 .track-row,
 .track-header,
-.waveform-track{
-
-transform:translateZ(0);
-backface-visibility:hidden;
-will-change:transform;
-
+.waveform-track {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
 }
-
