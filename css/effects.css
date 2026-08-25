@@ -2,914 +2,743 @@
 EFFECTS WORKSPACE
 =========================================================*/
 
-#effectsWorkspace{
+#effectsWorkspace {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  gap: 20px;
 
-gap:20px;
+  padding: 20px;
 
-padding:20px;
+  height: 100%;
 
-height:100%;
+  overflow: auto;
 
-overflow:auto;
-
-background:#171C26;
-
+  background: #171c26;
 }
-
 
 /*=========================================================
 SECTION TITLE
 =========================================================*/
 
-.effects-title{
+.effects-title {
+  display: flex;
 
-display:flex;
+  justify-content: space-between;
 
-justify-content:space-between;
+  align-items: center;
 
-align-items:center;
-
-margin-bottom:10px;
-
+  margin-bottom: 10px;
 }
 
-.effects-title h2{
+.effects-title h2 {
+  font-size: 24px;
 
-font-size:24px;
+  font-weight: 700;
 
-font-weight:700;
-
-color:#FFF;
-
+  color: #fff;
 }
 
-.effects-title p{
+.effects-title p {
+  font-size: 13px;
 
-font-size:13px;
-
-color:#98A2B3;
-
+  color: #98a2b3;
 }
-
 
 /*=========================================================
 EFFECT PANEL
 =========================================================*/
 
-.effect-panel{
+.effect-panel {
+  background: #1f2633;
 
-background:#1F2633;
+  border: 1px solid #2d3444;
 
-border:1px solid #2D3444;
+  border-radius: 16px;
 
-border-radius:16px;
+  padding: 20px;
 
-padding:20px;
-
-box-shadow:
-
-0 15px 35px rgba(0,0,0,.25);
-
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
 }
-
 
 /*=========================================================
 EFFECT CARD
 =========================================================*/
 
-.effect-card{
+.effect-card {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  gap: 15px;
 
-gap:15px;
+  padding: 18px;
 
-padding:18px;
+  margin-bottom: 18px;
 
-margin-bottom:18px;
+  border-radius: 14px;
 
-border-radius:14px;
+  background: #232a37;
 
-background:#232A37;
+  border: 1px solid transparent;
 
-border:1px solid transparent;
-
-transition:.25s;
-
+  transition: 0.25s;
 }
 
-.effect-card:hover{
+.effect-card:hover {
+  border-color: #4f7cff;
 
-border-color:#4F7CFF;
-
-transform:translateY(-2px);
-
+  transform: translateY(-2px);
 }
 
-.effect-card.active{
+.effect-card.active {
+  border-color: #00d9ff;
 
-border-color:#00D9FF;
-
-box-shadow:
-
-0 0 18px rgba(0,217,255,.20);
-
+  box-shadow: 0 0 18px rgba(0, 217, 255, 0.2);
 }
-
 
 /*=========================================================
 CARD HEADER
 =========================================================*/
 
-.effect-header{
+.effect-header {
+  display: flex;
 
-display:flex;
+  justify-content: space-between;
 
-justify-content:space-between;
-
-align-items:center;
-
+  align-items: center;
 }
 
-.effect-name{
+.effect-name {
+  font-size: 16px;
 
-font-size:16px;
+  font-weight: 600;
 
-font-weight:600;
-
-color:white;
-
+  color: white;
 }
 
-.effect-description{
+.effect-description {
+  font-size: 13px;
 
-font-size:13px;
-
-color:#98A2B3;
-
+  color: #98a2b3;
 }
-
 
 /*=========================================================
 ENABLE SWITCH
 =========================================================*/
 
-.effect-switch{
+.effect-switch {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
-
-gap:10px;
-
+  gap: 10px;
 }
 
-.effect-switch input{
-
-accent-color:#4F7CFF;
-
+.effect-switch input {
+  accent-color: #4f7cff;
 }
-
 
 /*=========================================================
 SLIDER GROUP
 =========================================================*/
 
-.slider-group{
+.slider-group {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
-
-gap:14px;
-
+  gap: 14px;
 }
 
-.slider-row{
+.slider-row {
+  display: grid;
 
-display:grid;
+  grid-template-columns: 140px 1fr 60px;
 
-grid-template-columns:140px 1fr 60px;
+  align-items: center;
 
-align-items:center;
-
-gap:15px;
-
+  gap: 15px;
 }
 
-.slider-row label{
+.slider-row label {
+  font-size: 13px;
 
-font-size:13px;
-
-color:#DDD;
-
+  color: #ddd;
 }
 
-.slider-row span{
+.slider-row span {
+  font-family: Consolas, monospace;
 
-font-family:Consolas, monospace;
+  font-size: 13px;
 
-font-size:13px;
+  text-align: right;
 
-text-align:right;
-
-color:#98A2B3;
-
+  color: #98a2b3;
 }
-
 
 /*=========================================================
 SLIDER
 =========================================================*/
 
-.effect-slider{
+.effect-slider {
+  width: 100%;
 
-width:100%;
+  height: 6px;
 
-height:6px;
+  appearance: none;
 
-appearance:none;
+  border-radius: 20px;
 
-border-radius:20px;
+  background: #2d3444;
 
-background:#2D3444;
-
-outline:none;
-
+  outline: none;
 }
 
-.effect-slider::-webkit-slider-thumb{
+.effect-slider::-webkit-slider-thumb {
+  appearance: none;
 
-appearance:none;
+  width: 18px;
 
-width:18px;
+  height: 18px;
 
-height:18px;
+  border-radius: 50%;
 
-border-radius:50%;
+  background: #4f7cff;
 
-background:#4F7CFF;
+  cursor: pointer;
 
-cursor:pointer;
-
-transition:.2s;
-
+  transition: 0.2s;
 }
 
-.effect-slider::-webkit-slider-thumb:hover{
-
-transform:scale(1.15);
-
+.effect-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
 }
-
 
 /*=========================================================
 KNOB
 =========================================================*/
 
-.effect-knob{
+.effect-knob {
+  width: 70px;
 
-width:70px;
+  height: 70px;
 
-height:70px;
+  border-radius: 50%;
 
-border-radius:50%;
+  background: radial-gradient(circle, #2d3444, #1a1f2a);
 
-background:
+  border: 2px solid #3a455b;
 
-radial-gradient(circle,#2D3444,#1A1F2A);
+  position: relative;
 
-border:2px solid #3A455B;
-
-position:relative;
-
-cursor:pointer;
-
+  cursor: pointer;
 }
 
-.effect-knob::after{
+.effect-knob::after {
+  content: "";
 
-content:"";
+  position: absolute;
 
-position:absolute;
+  left: 50%;
 
-left:50%;
+  top: 10px;
 
-top:10px;
+  width: 4px;
 
-width:4px;
+  height: 20px;
 
-height:20px;
+  background: #4f7cff;
 
-background:#4F7CFF;
+  transform: translateX(-50%);
 
-transform:translateX(-50%);
-
-border-radius:4px;
-
+  border-radius: 4px;
 }
-
 
 /*=========================================================
 VALUE BOX
 =========================================================*/
 
-.value-box{
+.value-box {
+  padding: 8px 12px;
 
-padding:8px 12px;
+  background: #11161f;
 
-background:#11161F;
+  border-radius: 10px;
 
-border-radius:10px;
+  font-family: Consolas, monospace;
 
-font-family:Consolas, monospace;
+  text-align: center;
 
-text-align:center;
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 BUTTONS
 =========================================================*/
 
-.effect-buttons{
+.effect-buttons {
+  display: flex;
 
-display:flex;
+  gap: 12px;
 
-gap:12px;
-
-margin-top:12px;
-
+  margin-top: 12px;
 }
 
-.effect-buttons button{
+.effect-buttons button {
+  padding: 10px 18px;
 
-padding:10px 18px;
+  border: none;
 
-border:none;
+  border-radius: 10px;
 
-border-radius:10px;
+  background: #2d3444;
 
-background:#2D3444;
+  color: white;
 
-color:white;
+  cursor: pointer;
 
-cursor:pointer;
-
-transition:.25s;
-
+  transition: 0.25s;
 }
 
-.effect-buttons button:hover{
-
-background:#4F7CFF;
-
+.effect-buttons button:hover {
+  background: #4f7cff;
 }
-
 
 /*=========================================================
 PRESET SELECTOR
 =========================================================*/
 
-.effect-presets{
+.effect-presets {
+  display: flex;
 
-display:flex;
+  gap: 10px;
 
-gap:10px;
+  flex-wrap: wrap;
 
-flex-wrap:wrap;
-
-margin-top:15px;
-
+  margin-top: 15px;
 }
 
-.effect-preset{
+.effect-preset {
+  padding: 8px 14px;
 
-padding:8px 14px;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 20px;
 
-border-radius:20px;
+  cursor: pointer;
 
-cursor:pointer;
+  transition: 0.25s;
 
-transition:.25s;
-
-font-size:13px;
-
+  font-size: 13px;
 }
 
-.effect-preset:hover{
+.effect-preset:hover {
+  background: #4f7cff;
 
-background:#4F7CFF;
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 EQUALIZER PANEL
 =========================================================*/
 
-.equalizer-panel{
+.equalizer-panel {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  gap: 20px;
 
-gap:20px;
+  padding: 20px;
 
-padding:20px;
+  background: #1f2633;
 
-background:#1F2633;
+  border-radius: 16px;
 
-border-radius:16px;
-
-border:1px solid #2D3444;
-
+  border: 1px solid #2d3444;
 }
-
 
 /*=========================================================
 10 BAND EQ
 =========================================================*/
 
-.eq-container{
+.eq-container {
+  display: flex;
 
-display:flex;
+  justify-content: space-between;
 
-justify-content:space-between;
+  align-items: flex-end;
 
-align-items:flex-end;
+  gap: 18px;
 
-gap:18px;
-
-height:260px;
-
+  height: 260px;
 }
 
-.eq-band{
+.eq-band {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  align-items: center;
 
-align-items:center;
+  gap: 12px;
 
-gap:12px;
-
-flex:1;
-
+  flex: 1;
 }
 
-.eq-slider{
+.eq-slider {
+  appearance: none;
 
-appearance:none;
+  -webkit-appearance: slider-vertical;
 
--webkit-appearance:slider-vertical;
+  height: 180px;
 
-height:180px;
+  width: 22px;
 
-width:22px;
+  cursor: pointer;
 
-cursor:pointer;
-
-accent-color:#4F7CFF;
-
+  accent-color: #4f7cff;
 }
 
-.eq-frequency{
+.eq-frequency {
+  font-size: 12px;
 
-font-size:12px;
+  color: #98a2b3;
 
-color:#98A2B3;
-
-font-family:Consolas, monospace;
-
+  font-family: Consolas, monospace;
 }
 
-.eq-value{
+.eq-value {
+  font-size: 12px;
 
-font-size:12px;
+  font-weight: 600;
 
-font-weight:600;
-
-color:#FFF;
-
+  color: #fff;
 }
-
 
 /*=========================================================
 MASTER GAIN
 =========================================================*/
 
-.master-gain{
+.master-gain {
+  margin-top: 20px;
 
-margin-top:20px;
+  padding: 15px;
 
-padding:15px;
+  background: #232a37;
 
-background:#232A37;
-
-border-radius:12px;
-
+  border-radius: 12px;
 }
 
-.master-gain label{
+.master-gain label {
+  display: block;
 
-display:block;
+  margin-bottom: 12px;
 
-margin-bottom:12px;
+  font-size: 14px;
 
-font-size:14px;
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 EFFECT CHAIN
 =========================================================*/
 
-.effect-chain{
+.effect-chain {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  gap: 14px;
 
-gap:14px;
-
-margin-top:30px;
-
+  margin-top: 30px;
 }
 
-.chain-item{
+.chain-item {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  justify-content: space-between;
 
-justify-content:space-between;
+  padding: 15px;
 
-padding:15px;
+  background: #232a37;
 
-background:#232A37;
+  border-radius: 12px;
 
-border-radius:12px;
+  border: 1px solid transparent;
 
-border:1px solid transparent;
+  transition: 0.25s;
 
-transition:.25s;
-
-cursor:grab;
-
+  cursor: grab;
 }
 
-.chain-item:hover{
+.chain-item:hover {
+  border-color: #4f7cff;
 
-border-color:#4F7CFF;
-
-transform:translateY(-2px);
-
+  transform: translateY(-2px);
 }
 
-.chain-item.dragging{
+.chain-item.dragging {
+  opacity: 0.65;
 
-opacity:.65;
-
-cursor:grabbing;
-
+  cursor: grabbing;
 }
 
-.chain-left{
+.chain-left {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
-
-gap:15px;
-
+  gap: 15px;
 }
 
-.chain-icon{
+.chain-icon {
+  width: 42px;
 
-width:42px;
+  height: 42px;
 
-height:42px;
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  justify-content: center;
 
-justify-content:center;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 10px;
 
-border-radius:10px;
+  font-size: 18px;
 
-font-size:18px;
-
-color:#4F7CFF;
-
+  color: #4f7cff;
 }
 
-.chain-name{
+.chain-name {
+  font-size: 15px;
 
-font-size:15px;
+  font-weight: 600;
 
-font-weight:600;
-
-color:#FFF;
-
+  color: #fff;
 }
 
-.chain-type{
+.chain-type {
+  font-size: 12px;
 
-font-size:12px;
-
-color:#98A2B3;
-
+  color: #98a2b3;
 }
-
 
 /*=========================================================
 CHAIN ACTIONS
 =========================================================*/
 
-.chain-actions{
+.chain-actions {
+  display: flex;
 
-display:flex;
-
-gap:10px;
-
+  gap: 10px;
 }
 
-.chain-actions button{
+.chain-actions button {
+  width: 36px;
 
-width:36px;
+  height: 36px;
 
-height:36px;
+  border: none;
 
-border:none;
+  border-radius: 8px;
 
-border-radius:8px;
+  background: #2d3444;
 
-background:#2D3444;
+  color: white;
 
-color:white;
+  cursor: pointer;
 
-cursor:pointer;
-
-transition:.2s;
-
+  transition: 0.2s;
 }
 
-.chain-actions button:hover{
-
-background:#4F7CFF;
-
+.chain-actions button:hover {
+  background: #4f7cff;
 }
-
 
 /*=========================================================
 PLUGIN RACK
 =========================================================*/
 
-.plugin-rack{
+.plugin-rack {
+  display: grid;
 
-display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 
-grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap: 18px;
 
-gap:18px;
-
-margin-top:25px;
-
+  margin-top: 25px;
 }
 
-.plugin-slot{
+.plugin-slot {
+  background: #232a37;
 
-background:#232A37;
+  padding: 18px;
 
-padding:18px;
+  border-radius: 14px;
 
-border-radius:14px;
+  border: 1px solid transparent;
 
-border:1px solid transparent;
+  transition: 0.25s;
 
-transition:.25s;
-
-cursor:pointer;
-
+  cursor: pointer;
 }
 
-.plugin-slot:hover{
-
-border-color:#4F7CFF;
-
+.plugin-slot:hover {
+  border-color: #4f7cff;
 }
 
-.plugin-slot.active{
+.plugin-slot.active {
+  border-color: #00d9ff;
 
-border-color:#00D9FF;
-
-box-shadow:
-
-0 0 18px rgba(0,217,255,.20);
-
+  box-shadow: 0 0 18px rgba(0, 217, 255, 0.2);
 }
 
-.plugin-title{
+.plugin-title {
+  font-size: 15px;
 
-font-size:15px;
+  font-weight: 600;
 
-font-weight:600;
-
-margin-bottom:8px;
-
+  margin-bottom: 8px;
 }
 
-.plugin-version{
+.plugin-version {
+  font-size: 12px;
 
-font-size:12px;
-
-color:#98A2B3;
-
+  color: #98a2b3;
 }
-
 
 /*=========================================================
 PRESET MANAGER
 =========================================================*/
 
-.preset-manager{
+.preset-manager {
+  margin-top: 30px;
 
-margin-top:30px;
+  padding: 20px;
 
-padding:20px;
+  background: #1f2633;
 
-background:#1F2633;
-
-border-radius:16px;
-
+  border-radius: 16px;
 }
 
-.preset-list{
+.preset-list {
+  display: flex;
 
-display:flex;
+  flex-wrap: wrap;
 
-flex-wrap:wrap;
+  gap: 12px;
 
-gap:12px;
-
-margin-top:15px;
-
+  margin-top: 15px;
 }
 
-.preset-item{
+.preset-item {
+  padding: 10px 16px;
 
-padding:10px 16px;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 20px;
 
-border-radius:20px;
+  cursor: pointer;
 
-cursor:pointer;
+  transition: 0.25s;
 
-transition:.25s;
-
-font-size:13px;
-
+  font-size: 13px;
 }
 
-.preset-item:hover{
+.preset-item:hover {
+  background: #4f7cff;
 
-background:#4F7CFF;
-
-color:white;
-
+  color: white;
 }
 
-.preset-item.active{
+.preset-item.active {
+  background: #00d9ff;
 
-background:#00D9FF;
+  color: #111;
 
-color:#111;
-
-font-weight:700;
-
+  font-weight: 700;
 }
-
 
 /*=========================================================
 A/B COMPARISON
 =========================================================*/
 
-.compare-panel{
+.compare-panel {
+  display: flex;
 
-display:flex;
+  gap: 15px;
 
-gap:15px;
-
-margin-top:25px;
-
+  margin-top: 25px;
 }
 
-.compare-button{
+.compare-button {
+  flex: 1;
 
-flex:1;
+  padding: 14px;
 
-padding:14px;
+  border: none;
 
-border:none;
+  border-radius: 12px;
 
-border-radius:12px;
+  background: #2d3444;
 
-background:#2D3444;
+  color: white;
 
-color:white;
+  cursor: pointer;
 
-cursor:pointer;
+  transition: 0.25s;
 
-transition:.25s;
-
-font-weight:600;
-
+  font-weight: 600;
 }
 
-.compare-button:hover{
-
-background:#4F7CFF;
-
+.compare-button:hover {
+  background: #4f7cff;
 }
 
-.compare-button.active{
-
-background:#14C38E;
-
+.compare-button.active {
+  background: #14c38e;
 }
-
 
 /*=========================================================
 CPU METER
 =========================================================*/
 
-.cpu-meter{
+.cpu-meter {
+  margin-top: 20px;
 
-margin-top:20px;
+  padding: 15px;
 
-padding:15px;
+  background: #232a37;
 
-background:#232A37;
-
-border-radius:12px;
-
+  border-radius: 12px;
 }
 
-.cpu-bar{
+.cpu-bar {
+  height: 10px;
 
-height:10px;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 20px;
 
-border-radius:20px;
+  overflow: hidden;
 
-overflow:hidden;
-
-margin-top:10px;
-
+  margin-top: 10px;
 }
 
-.cpu-fill{
+.cpu-fill {
+  height: 100%;
 
-height:100%;
+  width: 28%;
 
-width:28%;
-
-background:
-
-linear-gradient(
-
-90deg,
-
-#14C38E,
-
-#FFD43B,
-
-#E74C3C);
-
+  background: linear-gradient(90deg, #14c38e, #ffd43b, #e74c3c);
 }
-
 
 /*=========================================================
 GPU OPTIMIZATION
@@ -917,1027 +746,785 @@ GPU OPTIMIZATION
 
 .chain-item,
 .plugin-slot,
-.eq-band{
+.eq-band {
+  transform: translateZ(0);
 
-transform:translateZ(0);
+  backface-visibility: hidden;
 
-backface-visibility:hidden;
-
-will-change:transform;
-
+  will-change: transform;
 }
-
 
 /*=========================================================
 VIDEO EFFECTS PANEL
 =========================================================*/
 
-.video-effects{
+.video-effects {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  gap: 24px;
 
-gap:24px;
+  padding: 20px;
 
-padding:20px;
+  background: #1f2633;
 
-background:#1F2633;
+  border-radius: 16px;
 
-border-radius:16px;
-
-border:1px solid #2D3444;
-
+  border: 1px solid #2d3444;
 }
-
 
 /*=========================================================
 COLOR GRADING
 =========================================================*/
 
-.color-grading{
+.color-grading {
+  display: grid;
 
-display:grid;
+  grid-template-columns: repeat(2, 1fr);
 
-grid-template-columns:repeat(2,1fr);
-
-gap:25px;
-
+  gap: 25px;
 }
 
-.color-wheel-card{
+.color-wheel-card {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  align-items: center;
 
-align-items:center;
+  padding: 20px;
 
-padding:20px;
+  background: #232a37;
 
-background:#232A37;
-
-border-radius:16px;
-
+  border-radius: 16px;
 }
 
-.color-wheel{
+.color-wheel {
+  width: 180px;
 
-width:180px;
+  height: 180px;
 
-height:180px;
+  border-radius: 50%;
 
-border-radius:50%;
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
 
-background:
+  position: relative;
 
-conic-gradient(
-
-red,
-
-yellow,
-
-lime,
-
-cyan,
-
-blue,
-
-magenta,
-
-red);
-
-position:relative;
-
-margin-bottom:18px;
-
+  margin-bottom: 18px;
 }
 
-.color-wheel::after{
+.color-wheel::after {
+  content: "";
 
-content:"";
+  position: absolute;
 
-position:absolute;
+  inset: 24%;
 
-inset:24%;
+  background: #232a37;
 
-background:#232A37;
-
-border-radius:50%;
-
+  border-radius: 50%;
 }
-
 
 /*=========================================================
 CURVES
 =========================================================*/
 
-.curves-editor{
+.curves-editor {
+  height: 220px;
 
-height:220px;
+  background: #11161f;
 
-background:#11161F;
+  border-radius: 14px;
 
-border-radius:14px;
+  border: 1px solid #2d3444;
 
-border:1px solid #2D3444;
+  position: relative;
 
-position:relative;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
 
-.curves-grid{
+.curves-grid {
+  position: absolute;
 
-position:absolute;
+  inset: 0;
 
-inset:0;
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, 0.04) 1px,
 
-background-image:
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 1px,
 
-linear-gradient(
+      transparent 1px
+    );
 
-rgba(255,255,255,.04) 1px,
-
-transparent 1px),
-
-linear-gradient(
-
-90deg,
-
-rgba(255,255,255,.04) 1px,
-
-transparent 1px);
-
-background-size:40px 40px;
-
+  background-size: 40px 40px;
 }
-
 
 /*=========================================================
 LUT MANAGER
 =========================================================*/
 
-.lut-manager{
+.lut-manager {
+  display: grid;
 
-display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
 
-grid-template-columns:
-
-repeat(auto-fill,minmax(170px,1fr));
-
-gap:18px;
-
+  gap: 18px;
 }
 
-.lut-card{
+.lut-card {
+  padding: 16px;
 
-padding:16px;
+  background: #232a37;
 
-background:#232A37;
+  border-radius: 14px;
 
-border-radius:14px;
+  cursor: pointer;
 
-cursor:pointer;
+  transition: 0.25s;
 
-transition:.25s;
-
-border:1px solid transparent;
-
+  border: 1px solid transparent;
 }
 
-.lut-card:hover{
+.lut-card:hover {
+  border-color: #4f7cff;
 
-border-color:#4F7CFF;
-
-transform:translateY(-3px);
-
+  transform: translateY(-3px);
 }
 
-.lut-card.active{
-
-border-color:#00D9FF;
-
+.lut-card.active {
+  border-color: #00d9ff;
 }
-
 
 /*=========================================================
 VIDEO FILTERS
 =========================================================*/
 
-.filter-list{
+.filter-list {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
-
-gap:15px;
-
+  gap: 15px;
 }
 
-.filter-item{
+.filter-item {
+  display: flex;
 
-display:flex;
+  justify-content: space-between;
 
-justify-content:space-between;
+  align-items: center;
 
-align-items:center;
+  padding: 16px;
 
-padding:16px;
+  background: #232a37;
 
-background:#232A37;
-
-border-radius:12px;
-
+  border-radius: 12px;
 }
 
-.filter-item label{
+.filter-item label {
+  font-size: 14px;
 
-font-size:14px;
+  font-weight: 600;
 
-font-weight:600;
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 FILTER SLIDER
 =========================================================*/
 
-.filter-slider{
+.filter-slider {
+  width: 240px;
 
-width:240px;
-
-accent-color:#4F7CFF;
-
+  accent-color: #4f7cff;
 }
-
 
 /*=========================================================
 TRANSITIONS
 =========================================================*/
 
-.transition-grid{
+.transition-grid {
+  display: grid;
 
-display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 
-grid-template-columns:
-
-repeat(auto-fill,minmax(160px,1fr));
-
-gap:16px;
-
+  gap: 16px;
 }
 
-.transition-card{
+.transition-card {
+  height: 110px;
 
-height:110px;
+  border-radius: 14px;
 
-border-radius:14px;
+  background: #232a37;
 
-background:#232A37;
+  display: flex;
 
-display:flex;
+  justify-content: center;
 
-justify-content:center;
+  align-items: center;
 
-align-items:center;
+  cursor: pointer;
 
-cursor:pointer;
+  transition: 0.25s;
 
-transition:.25s;
+  border: 1px solid transparent;
 
-border:1px solid transparent;
-
-font-weight:600;
-
+  font-weight: 600;
 }
 
-.transition-card:hover{
+.transition-card:hover {
+  border-color: #4f7cff;
 
-border-color:#4F7CFF;
-
-transform:translateY(-3px);
-
+  transform: translateY(-3px);
 }
 
-.transition-card.active{
+.transition-card.active {
+  border-color: #00d9ff;
 
-border-color:#00D9FF;
-
-box-shadow:
-
-0 0 18px rgba(0,217,255,.25);
-
+  box-shadow: 0 0 18px rgba(0, 217, 255, 0.25);
 }
-
 
 /*=========================================================
 MOTION EFFECTS
 =========================================================*/
 
-.motion-panel{
+.motion-panel {
+  display: grid;
 
-display:grid;
+  grid-template-columns: 1fr 1fr;
 
-grid-template-columns:1fr 1fr;
-
-gap:18px;
-
+  gap: 18px;
 }
 
-.motion-card{
+.motion-card {
+  padding: 18px;
 
-padding:18px;
+  background: #232a37;
 
-background:#232A37;
-
-border-radius:14px;
-
+  border-radius: 14px;
 }
 
-.motion-card h4{
-
-margin-bottom:14px;
-
+.motion-card h4 {
+  margin-bottom: 14px;
 }
-
 
 /*=========================================================
 KEYFRAME LIST
 =========================================================*/
 
-.keyframe-list{
+.keyframe-list {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  gap: 10px;
 
-gap:10px;
-
-margin-top:14px;
-
+  margin-top: 14px;
 }
 
-.keyframe-item{
+.keyframe-item {
+  padding: 10px;
 
-padding:10px;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 10px;
 
-border-radius:10px;
+  display: flex;
 
-display:flex;
+  justify-content: space-between;
 
-justify-content:space-between;
-
-align-items:center;
-
+  align-items: center;
 }
-
 
 /*=========================================================
 MASK EDITOR
 =========================================================*/
 
-.mask-editor{
+.mask-editor {
+  height: 220px;
 
-height:220px;
+  background: #11161f;
 
-background:#11161F;
+  border-radius: 14px;
 
-border-radius:14px;
+  border: 1px solid #2d3444;
 
-border:1px solid #2D3444;
+  position: relative;
 
-position:relative;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
 
-.mask-point{
+.mask-point {
+  position: absolute;
 
-position:absolute;
+  width: 12px;
 
-width:12px;
+  height: 12px;
 
-height:12px;
+  border-radius: 50%;
 
-border-radius:50%;
+  background: #00d9ff;
 
-background:#00D9FF;
+  border: 2px solid white;
 
-border:2px solid white;
-
-cursor:move;
-
+  cursor: move;
 }
-
 
 /*=========================================================
 VIDEO SCOPES
 =========================================================*/
 
-.scope-grid{
+.scope-grid {
+  display: grid;
 
-display:grid;
+  grid-template-columns: repeat(2, 1fr);
 
-grid-template-columns:repeat(2,1fr);
-
-gap:18px;
-
+  gap: 18px;
 }
 
-.scope-box{
+.scope-box {
+  height: 180px;
 
-height:180px;
+  background: #000;
 
-background:#000;
+  border-radius: 14px;
 
-border-radius:14px;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
-
 
 /*=========================================================
 GPU OPTIMIZATION
 =========================================================*/
 
 .transition-card,
-
 .lut-card,
-
 .motion-card,
+.color-wheel {
+  transform: translateZ(0);
 
-.color-wheel{
+  backface-visibility: hidden;
 
-transform:translateZ(0);
-
-backface-visibility:hidden;
-
-will-change:transform;
-
+  will-change: transform;
 }
-
-
 
 /*=========================================================
 AUTOMATION PANEL
 =========================================================*/
 
-.automation-panel{
+.automation-panel {
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  gap: 20px;
 
-gap:20px;
+  padding: 20px;
 
-padding:20px;
+  background: #1f2633;
 
-background:#1F2633;
+  border-radius: 16px;
 
-border-radius:16px;
-
-border:1px solid #2D3444;
-
+  border: 1px solid #2d3444;
 }
-
 
 /*=========================================================
 AUTOMATION TRACK
 =========================================================*/
 
-.automation-track{
+.automation-track {
+  position: relative;
 
-position:relative;
+  height: 80px;
 
-height:80px;
+  background: #11161f;
 
-background:#11161F;
+  border-radius: 12px;
 
-border-radius:12px;
+  overflow: hidden;
 
-overflow:hidden;
-
-border:1px solid #2D3444;
-
+  border: 1px solid #2d3444;
 }
 
-.automation-grid{
+.automation-grid {
+  position: absolute;
 
-position:absolute;
+  inset: 0;
 
-inset:0;
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, 0.04) 1px,
 
-background-image:
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 1px,
 
-linear-gradient(
+      transparent 1px
+    );
 
-rgba(255,255,255,.04) 1px,
-
-transparent 1px),
-
-linear-gradient(
-
-90deg,
-
-rgba(255,255,255,.04) 1px,
-
-transparent 1px);
-
-background-size:
-
-40px 40px;
-
+  background-size: 40px 40px;
 }
-
 
 /*=========================================================
 AUTOMATION POINT
 =========================================================*/
 
-.automation-point{
+.automation-point {
+  position: absolute;
 
-position:absolute;
+  width: 12px;
 
-width:12px;
+  height: 12px;
 
-height:12px;
+  background: #00d9ff;
 
-background:#00D9FF;
+  border-radius: 50%;
 
-border-radius:50%;
+  border: 2px solid #fff;
 
-border:2px solid #FFF;
+  cursor: grab;
 
-cursor:grab;
-
-transition:.2s;
-
+  transition: 0.2s;
 }
 
-.automation-point:hover{
-
-transform:scale(1.2);
-
+.automation-point:hover {
+  transform: scale(1.2);
 }
-
 
 /*=========================================================
 AUTOMATION CURVE
 =========================================================*/
 
-.automation-curve{
+.automation-curve {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
-
-pointer-events:none;
-
+  pointer-events: none;
 }
-
 
 /*=========================================================
 ENVELOPE PANEL
 =========================================================*/
 
-.envelope-panel{
+.envelope-panel {
+  display: grid;
 
-display:grid;
+  grid-template-columns: 1fr 1fr;
 
-grid-template-columns:1fr 1fr;
+  gap: 20px;
 
-gap:20px;
-
-margin-top:25px;
-
+  margin-top: 25px;
 }
 
-.envelope-card{
+.envelope-card {
+  background: #232a37;
 
-background:#232A37;
+  padding: 18px;
 
-padding:18px;
-
-border-radius:14px;
-
+  border-radius: 14px;
 }
-
 
 /*=========================================================
 ENVELOPE BAR
 =========================================================*/
 
-.envelope-bar{
+.envelope-bar {
+  height: 12px;
 
-height:12px;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 20px;
 
-border-radius:20px;
+  overflow: hidden;
 
-overflow:hidden;
-
-margin-top:12px;
-
+  margin-top: 12px;
 }
 
-.envelope-fill{
+.envelope-fill {
+  height: 100%;
 
-height:100%;
+  width: 45%;
 
-width:45%;
-
-background:
-
-linear-gradient(
-
-90deg,
-
-#4F7CFF,
-
-#00D9FF);
-
+  background: linear-gradient(90deg, #4f7cff, #00d9ff);
 }
-
 
 /*=========================================================
 REAL-TIME STATUS
 =========================================================*/
 
-.processing-status{
+.processing-status {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  gap: 12px;
 
-gap:12px;
+  padding: 15px;
 
-padding:15px;
+  margin-top: 25px;
 
-margin-top:25px;
+  background: #232a37;
 
-background:#232A37;
-
-border-radius:12px;
-
+  border-radius: 12px;
 }
 
-.processing-dot{
+.processing-dot {
+  width: 12px;
 
-width:12px;
+  height: 12px;
 
-height:12px;
+  border-radius: 50%;
 
-border-radius:50%;
+  background: #14c38e;
 
-background:#14C38E;
-
-animation:pulse 1.2s infinite;
-
+  animation: pulse 1.2s infinite;
 }
 
-@keyframes pulse{
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
 
-0%,100%{
-
-opacity:1;
-
+  50% {
+    opacity: 0.35;
+  }
 }
-
-50%{
-
-opacity:.35;
-
-}
-
-}
-
 
 /*=========================================================
 RENDER QUEUE
 =========================================================*/
 
-.render-queue{
+.render-queue {
+  margin-top: 25px;
 
-margin-top:25px;
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
-
-gap:15px;
-
+  gap: 15px;
 }
 
-.render-job{
+.render-job {
+  display: flex;
 
-display:flex;
+  justify-content: space-between;
 
-justify-content:space-between;
+  align-items: center;
 
-align-items:center;
+  padding: 16px;
 
-padding:16px;
+  background: #232a37;
 
-background:#232A37;
-
-border-radius:12px;
-
+  border-radius: 12px;
 }
 
-.render-progress{
+.render-progress {
+  width: 180px;
 
-width:180px;
+  height: 10px;
 
-height:10px;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 20px;
 
-border-radius:20px;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
 
-.render-progress span{
+.render-progress span {
+  display: block;
 
-display:block;
+  height: 100%;
 
-height:100%;
+  width: 65%;
 
-width:65%;
-
-background:
-
-linear-gradient(
-
-90deg,
-
-#14C38E,
-
-#00D9FF);
-
+  background: linear-gradient(90deg, #14c38e, #00d9ff);
 }
-
 
 /*=========================================================
 TOAST
 =========================================================*/
 
-.effect-toast{
+.effect-toast {
+  position: fixed;
 
-position:fixed;
+  bottom: 25px;
 
-bottom:25px;
+  right: 25px;
 
-right:25px;
+  padding: 16px 20px;
 
-padding:16px 20px;
+  background: #1a1f2a;
 
-background:#1A1F2A;
+  border-left: 4px solid #4f7cff;
 
-border-left:4px solid #4F7CFF;
+  border-radius: 12px;
 
-border-radius:12px;
+  color: #fff;
 
-color:#FFF;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
 
-box-shadow:
+  animation: toastSlide 0.35s ease;
 
-0 20px 45px rgba(0,0,0,.35);
-
-animation:toastSlide .35s ease;
-
-z-index:9999;
-
+  z-index: 9999;
 }
 
-@keyframes toastSlide{
+@keyframes toastSlide {
+  from {
+    opacity: 0;
 
-from{
+    transform: translateY(30px);
+  }
 
-opacity:0;
+  to {
+    opacity: 1;
 
-transform:translateY(30px);
-
+    transform: none;
+  }
 }
-
-to{
-
-opacity:1;
-
-transform:none;
-
-}
-
-}
-
 
 /*=========================================================
 BADGES
 =========================================================*/
 
-.effect-badge{
+.effect-badge {
+  display: inline-flex;
 
-display:inline-flex;
+  align-items: center;
 
-align-items:center;
+  gap: 6px;
 
-gap:6px;
+  padding: 5px 12px;
 
-padding:5px 12px;
+  background: #4f7cff;
 
-background:#4F7CFF;
+  border-radius: 20px;
 
-border-radius:20px;
+  font-size: 11px;
 
-font-size:11px;
+  font-weight: 700;
 
-font-weight:700;
-
-color:white;
-
+  color: white;
 }
 
-.effect-badge.success{
-
-background:#14C38E;
-
+.effect-badge.success {
+  background: #14c38e;
 }
 
-.effect-badge.warning{
-
-background:#F39C12;
-
+.effect-badge.warning {
+  background: #f39c12;
 }
 
-.effect-badge.error{
-
-background:#E74C3C;
-
+.effect-badge.error {
+  background: #e74c3c;
 }
-
 
 /*=========================================================
 RESPONSIVE
 =========================================================*/
 
-@media(max-width:1200px){
-
-.color-grading,
-
-.motion-panel,
-
-.envelope-panel{
-
-grid-template-columns:1fr;
-
+@media (max-width: 1200px) {
+  .color-grading,
+  .motion-panel,
+  .envelope-panel {
+    grid-template-columns: 1fr;
+  }
 }
 
+@media (max-width: 900px) {
+  .eq-container {
+    overflow-x: auto;
+
+    gap: 25px;
+  }
+
+  .transition-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+
+  .plugin-rack {
+    grid-template-columns: 1fr;
+  }
 }
 
-@media(max-width:900px){
+@media (max-width: 600px) {
+  .effect-header {
+    flex-direction: column;
 
-.eq-container{
+    align-items: flex-start;
 
-overflow-x:auto;
+    gap: 10px;
+  }
 
-gap:25px;
+  .slider-row {
+    grid-template-columns: 1fr;
+  }
 
+  .filter-slider {
+    width: 100%;
+  }
+
+  .color-wheel {
+    width: 140px;
+
+    height: 140px;
+  }
 }
-
-.transition-grid{
-
-grid-template-columns:
-
-repeat(auto-fill,minmax(130px,1fr));
-
-}
-
-.plugin-rack{
-
-grid-template-columns:1fr;
-
-}
-
-}
-
-@media(max-width:600px){
-
-.effect-header{
-
-flex-direction:column;
-
-align-items:flex-start;
-
-gap:10px;
-
-}
-
-.slider-row{
-
-grid-template-columns:1fr;
-
-}
-
-.filter-slider{
-
-width:100%;
-
-}
-
-.color-wheel{
-
-width:140px;
-
-height:140px;
-
-}
-
-}
-
 
 /*=========================================================
 ACCESSIBILITY
 =========================================================*/
 
 .effect-slider:focus,
-
 .effect-knob:focus,
+button:focus {
+  outline: 2px solid #00d9ff;
 
-button:focus{
-
-outline:2px solid #00D9FF;
-
-outline-offset:2px;
-
+  outline-offset: 2px;
 }
-
 
 /*=========================================================
 GPU OPTIMIZATION
 =========================================================*/
 
 .effect-card,
-
 .transition-card,
-
 .plugin-slot,
-
 .eq-band,
-
 .color-wheel,
+.effect-toast {
+  transform: translateZ(0);
 
-.effect-toast{
+  backface-visibility: hidden;
 
-transform:translateZ(0);
-
-backface-visibility:hidden;
-
-will-change:
-
-transform,
-
-opacity;
-
+  will-change: transform, opacity;
 }
-
 
 /*=========================================================
 PRINT
 =========================================================*/
 
-@media print{
-
-.effect-panel,
-
-.video-effects,
-
-.equalizer-panel,
-
-.plugin-rack,
-
-.transition-grid{
-
-display:none;
-
+@media print {
+  .effect-panel,
+  .video-effects,
+  .equalizer-panel,
+  .plugin-rack,
+  .transition-grid {
+    display: none;
+  }
 }
-
-}
-
-
