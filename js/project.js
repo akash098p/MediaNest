@@ -1,25 +1,17 @@
 "use strict";
 
 class ProjectManager {
+  newProject() {
+    console.log("New Project");
+  }
 
-    newProject() {
+  saveProject() {
+    console.log("Save Project");
+  }
 
-        console.log("New Project");
-
-    }
-
-    saveProject() {
-
-        console.log("Save Project");
-
-    }
-
-    openProject() {
-
-        console.log("Open Project");
-
-    }
-
+  openProject() {
+    console.log("Open Project");
+  }
 }
 
 window.ProjectManager = new ProjectManager();
