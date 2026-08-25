@@ -14,72 +14,58 @@ body,
 button,
 input,
 select,
-textarea{
-
-transition:
-
-background-color .25s ease,
-color .25s ease,
-border-color .25s ease,
-box-shadow .25s ease;
-
+textarea {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
-
 
 /*=========================================================
 DEFAULT (DARK)
 =========================================================*/
 
-:root{
+:root {
+  --bg: #0f1117;
+  --bg2: #171c26;
+  --bg3: #232a37;
+  --bg4: #2d3444;
 
---bg:#0F1117;
---bg2:#171C26;
---bg3:#232A37;
---bg4:#2D3444;
+  --panel: #1a1f2a;
 
---panel:#1A1F2A;
+  --primary: #4f7cff;
+  --secondary: #00d9ff;
 
---primary:#4F7CFF;
---secondary:#00D9FF;
+  --success: #14c38e;
+  --warning: #ffd43b;
+  --danger: #e74c3c;
 
---success:#14C38E;
---warning:#FFD43B;
---danger:#E74C3C;
+  --text: #ffffff;
+  --text-muted: #98a2b3;
 
---text:#FFFFFF;
---text-muted:#98A2B3;
+  --border: #2d3444;
 
---border:#2D3444;
-
---shadow:
-0 15px 40px rgba(0,0,0,.35);
-
+  --shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
 }
-
 
 /*=========================================================
 BODY
 =========================================================*/
 
-body{
+body {
+  background: var(--bg);
 
-background:var(--bg);
-
-color:var(--text);
-
+  color: var(--text);
 }
-
 
 /*=========================================================
 WORKSPACE
 =========================================================*/
 
-#workspace{
-
-background:var(--bg);
-
+#workspace {
+  background: var(--bg);
 }
-
 
 /*=========================================================
 PANELS
@@ -89,41 +75,33 @@ PANELS
 .effect-panel,
 .property-panel,
 .asset-card,
-.track-header{
+.track-header {
+  background: var(--panel);
 
-background:var(--panel);
+  border: 1px solid var(--border);
 
-border:1px solid var(--border);
-
-box-shadow:var(--shadow);
-
+  box-shadow: var(--shadow);
 }
-
 
 /*=========================================================
 BUTTONS
 =========================================================*/
 
-button{
+button {
+  background: var(--bg4);
 
-background:var(--bg4);
+  color: var(--text);
 
-color:var(--text);
+  border: 1px solid var(--border);
 
-border:1px solid var(--border);
-
-transition:.25s;
-
+  transition: 0.25s;
 }
 
-button:hover{
+button:hover {
+  background: var(--primary);
 
-background:var(--primary);
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 INPUTS
@@ -131,91 +109,67 @@ INPUTS
 
 input,
 select,
-textarea{
+textarea {
+  background: var(--bg3);
 
-background:var(--bg3);
+  color: var(--text);
 
-color:var(--text);
+  border: 1px solid var(--border);
 
-border:1px solid var(--border);
-
-border-radius:10px;
-
+  border-radius: 10px;
 }
 
 input::placeholder,
-textarea::placeholder{
-
-color:var(--text-muted);
-
+textarea::placeholder {
+  color: var(--text-muted);
 }
-
 
 /*=========================================================
 HEADINGS
 =========================================================*/
 
-h1,h2,h3,h4,h5,h6{
-
-color:var(--text);
-
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text);
 }
-
 
 /*=========================================================
 LINKS
 =========================================================*/
 
-a{
+a {
+  color: var(--secondary);
 
-color:var(--secondary);
-
-text-decoration:none;
-
+  text-decoration: none;
 }
 
-a:hover{
-
-color:var(--primary);
-
+a:hover {
+  color: var(--primary);
 }
-
 
 /*=========================================================
 TIMELINE
 =========================================================*/
 
-#timelineWorkspace{
-
-background:var(--bg2);
-
+#timelineWorkspace {
+  background: var(--bg2);
 }
 
-.track-content{
-
-background-color:var(--bg2);
-
+.track-content {
+  background-color: var(--bg2);
 }
-
 
 /*=========================================================
 EDITOR
 =========================================================*/
 
-#editorArea{
-
-background:
-
-linear-gradient(
-
-180deg,
-
-var(--bg),
-
-var(--bg2));
-
+#editorArea {
+  background: linear-gradient(180deg, var(--bg), var(--bg2));
 }
-
 
 /*=========================================================
 WAVEFORM
@@ -224,77 +178,57 @@ WAVEFORM
 #waveformContainer,
 #spectrumContainer,
 #oscilloscopeContainer,
-#spectrogramContainer{
+#spectrogramContainer {
+  background: var(--bg2);
 
-background:var(--bg2);
-
-border-color:var(--border);
-
+  border-color: var(--border);
 }
-
 
 /*=========================================================
 EFFECTS
 =========================================================*/
 
-.effect-card{
-
-background:var(--bg3);
-
+.effect-card {
+  background: var(--bg3);
 }
 
-.effect-card.active{
-
-border-color:var(--secondary);
-
+.effect-card.active {
+  border-color: var(--secondary);
 }
-
 
 /*=========================================================
 SCROLLBAR
 =========================================================*/
 
-::-webkit-scrollbar{
+::-webkit-scrollbar {
+  width: 12px;
 
-width:12px;
-
-height:12px;
-
+  height: 12px;
 }
 
-::-webkit-scrollbar-track{
-
-background:var(--bg2);
-
+::-webkit-scrollbar-track {
+  background: var(--bg2);
 }
 
-::-webkit-scrollbar-thumb{
+::-webkit-scrollbar-thumb {
+  background: var(--bg4);
 
-background:var(--bg4);
-
-border-radius:20px;
-
+  border-radius: 20px;
 }
 
-::-webkit-scrollbar-thumb:hover{
-
-background:var(--primary);
-
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
-
 
 /*=========================================================
 SELECTION
 =========================================================*/
 
-::selection{
+::selection {
+  background: var(--primary);
 
-background:var(--primary);
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 FOCUS
@@ -303,243 +237,201 @@ FOCUS
 button:focus,
 input:focus,
 select:focus,
-textarea:focus{
+textarea:focus {
+  outline: none;
 
-outline:none;
-
-box-shadow:
-
-0 0 0 3px rgba(79,124,255,.35);
-
+  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.35);
 }
-
 
 /*=========================================================
 STATUS COLORS
 =========================================================*/
 
-.text-success{
-
-color:var(--success);
-
+.text-success {
+  color: var(--success);
 }
 
-.text-warning{
-
-color:var(--warning);
-
+.text-warning {
+  color: var(--warning);
 }
 
-.text-danger{
-
-color:var(--danger);
-
+.text-danger {
+  color: var(--danger);
 }
 
-.bg-success{
-
-background:var(--success);
-
+.bg-success {
+  background: var(--success);
 }
 
-.bg-warning{
-
-background:var(--warning);
-
+.bg-warning {
+  background: var(--warning);
 }
 
-.bg-danger{
-
-background:var(--danger);
-
+.bg-danger {
+  background: var(--danger);
 }
-
 
 /*=========================================================
 BADGES
 =========================================================*/
 
-.badge{
+.badge {
+  display: inline-flex;
 
-display:inline-flex;
+  align-items: center;
 
-align-items:center;
+  gap: 6px;
 
-gap:6px;
+  padding: 5px 12px;
 
-padding:5px 12px;
+  border-radius: 20px;
 
-border-radius:20px;
+  font-size: 11px;
 
-font-size:11px;
+  font-weight: 700;
 
-font-weight:700;
+  background: var(--primary);
 
-background:var(--primary);
-
-color:white;
-
+  color: white;
 }
 
-.badge.success{
-
-background:var(--success);
-
+.badge.success {
+  background: var(--success);
 }
 
-.badge.warning{
+.badge.warning {
+  background: var(--warning);
 
-background:var(--warning);
-
-color:#111;
-
+  color: #111;
 }
 
-.badge.danger{
-
-background:var(--danger);
-
+.badge.danger {
+  background: var(--danger);
 }
 
 /*=========================================================
 LIGHT THEME
 =========================================================*/
 
-body.theme-light{
+body.theme-light {
+  --bg: #f5f7fa;
+  --bg2: #ffffff;
+  --bg3: #eef2f7;
+  --bg4: #d8e0ea;
 
---bg:#F5F7FA;
---bg2:#FFFFFF;
---bg3:#EEF2F7;
---bg4:#D8E0EA;
+  --panel: #ffffff;
 
---panel:#FFFFFF;
+  --primary: #2563eb;
+  --secondary: #06b6d4;
 
---primary:#2563EB;
---secondary:#06B6D4;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #dc2626;
 
---success:#16A34A;
---warning:#F59E0B;
---danger:#DC2626;
+  --text: #1f2937;
+  --text-muted: #6b7280;
 
---text:#1F2937;
---text-muted:#6B7280;
+  --border: #d1d5db;
 
---border:#D1D5DB;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 
---shadow:
-0 10px 30px rgba(0,0,0,.10);
+  background: var(--bg);
 
-background:var(--bg);
-
-color:var(--text);
-
+  color: var(--text);
 }
-
 
 /*=========================================================
 MIDNIGHT THEME
 =========================================================*/
 
-body.theme-midnight{
+body.theme-midnight {
+  --bg: #050816;
+  --bg2: #0d1226;
+  --bg3: #18203a;
+  --bg4: #253152;
 
---bg:#050816;
---bg2:#0D1226;
---bg3:#18203A;
---bg4:#253152;
+  --panel: #11182d;
 
---panel:#11182D;
+  --primary: #5b8cff;
+  --secondary: #00e5ff;
 
---primary:#5B8CFF;
---secondary:#00E5FF;
+  --success: #22c55e;
+  --warning: #facc15;
+  --danger: #ef4444;
 
---success:#22C55E;
---warning:#FACC15;
---danger:#EF4444;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
 
---text:#F8FAFC;
---text-muted:#94A3B8;
+  --border: #24304d;
 
---border:#24304D;
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.5);
 
---shadow:
-0 18px 45px rgba(0,0,0,.50);
+  background: var(--bg);
 
-background:var(--bg);
-
-color:var(--text);
-
+  color: var(--text);
 }
-
 
 /*=========================================================
 OCEAN THEME
 =========================================================*/
 
-body.theme-ocean{
+body.theme-ocean {
+  --bg: #071e26;
+  --bg2: #0c2933;
+  --bg3: #133b49;
+  --bg4: #1c5063;
 
---bg:#071E26;
---bg2:#0C2933;
---bg3:#133B49;
---bg4:#1C5063;
+  --panel: #0e2f3a;
 
---panel:#0E2F3A;
+  --primary: #00b4ff;
+  --secondary: #29e3ff;
 
---primary:#00B4FF;
---secondary:#29E3FF;
+  --success: #00d27a;
+  --warning: #ffd166;
+  --danger: #ff5a5f;
 
---success:#00D27A;
---warning:#FFD166;
---danger:#FF5A5F;
+  --text: #ecfeff;
+  --text-muted: #9ed7e5;
 
---text:#ECFEFF;
---text-muted:#9ED7E5;
+  --border: #255667;
 
---border:#255667;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
 
---shadow:
-0 18px 40px rgba(0,0,0,.35);
+  background: var(--bg);
 
-background:var(--bg);
-
-color:var(--text);
-
+  color: var(--text);
 }
-
 
 /*=========================================================
 SUNSET THEME
 =========================================================*/
 
-body.theme-sunset{
+body.theme-sunset {
+  --bg: #2a1614;
+  --bg2: #3a1e1a;
+  --bg3: #56302a;
+  --bg4: #73453d;
 
---bg:#2A1614;
---bg2:#3A1E1A;
---bg3:#56302A;
---bg4:#73453D;
+  --panel: #41231f;
 
---panel:#41231F;
+  --primary: #ff7b54;
+  --secondary: #ffb26b;
 
---primary:#FF7B54;
---secondary:#FFB26B;
+  --success: #6dd47e;
+  --warning: #ffd56f;
+  --danger: #ff4d6d;
 
---success:#6DD47E;
---warning:#FFD56F;
---danger:#FF4D6D;
+  --text: #fff8f5;
+  --text-muted: #d8b8aa;
 
---text:#FFF8F5;
---text-muted:#D8B8AA;
+  --border: #73453d;
 
---border:#73453D;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
 
---shadow:
-0 18px 40px rgba(0,0,0,.38);
+  background: var(--bg);
 
-background:var(--bg);
-
-color:var(--text);
-
+  color: var(--text);
 }
-
 
 /*=========================================================
 COMMON COMPONENT OVERRIDES
@@ -547,44 +439,27 @@ COMMON COMPONENT OVERRIDES
 
 body.theme-light .panel,
 body.theme-light .effect-card,
-body.theme-light .asset-card{
+body.theme-light .asset-card {
+  background: var(--panel);
 
-background:var(--panel);
-
-color:var(--text);
-
+  color: var(--text);
 }
 
-body.theme-light button{
-
-color:var(--text);
-
+body.theme-light button {
+  color: var(--text);
 }
 
 body.theme-light input,
 body.theme-light textarea,
-body.theme-light select{
+body.theme-light select {
+  background: var(--bg3);
 
-background:var(--bg3);
-
-color:var(--text);
-
+  color: var(--text);
 }
 
-body.theme-light #editorArea{
-
-background:
-
-linear-gradient(
-
-180deg,
-
-var(--bg),
-
-var(--bg2));
-
+body.theme-light #editorArea {
+  background: linear-gradient(180deg, var(--bg), var(--bg2));
 }
-
 
 /*=========================================================
 TIMELINE
@@ -593,12 +468,9 @@ TIMELINE
 body.theme-light #timelineWorkspace,
 body.theme-midnight #timelineWorkspace,
 body.theme-ocean #timelineWorkspace,
-body.theme-sunset #timelineWorkspace{
-
-background:var(--bg2);
-
+body.theme-sunset #timelineWorkspace {
+  background: var(--bg2);
 }
-
 
 /*=========================================================
 WAVEFORM
@@ -608,28 +480,22 @@ body.theme-light #waveformContainer,
 body.theme-midnight #waveformContainer,
 body.theme-ocean #waveformContainer,
 body.theme-sunset #waveformContainer,
-
 body.theme-light #spectrumContainer,
 body.theme-midnight #spectrumContainer,
 body.theme-ocean #spectrumContainer,
 body.theme-sunset #spectrumContainer,
-
 body.theme-light #oscilloscopeContainer,
 body.theme-midnight #oscilloscopeContainer,
 body.theme-ocean #oscilloscopeContainer,
 body.theme-sunset #oscilloscopeContainer,
-
 body.theme-light #spectrogramContainer,
 body.theme-midnight #spectrogramContainer,
 body.theme-ocean #spectrogramContainer,
-body.theme-sunset #spectrogramContainer{
+body.theme-sunset #spectrogramContainer {
+  background: var(--bg2);
 
-background:var(--bg2);
-
-border-color:var(--border);
-
+  border-color: var(--border);
 }
-
 
 /*=========================================================
 BUTTON COLORS
@@ -638,14 +504,11 @@ BUTTON COLORS
 body.theme-light button:hover,
 body.theme-midnight button:hover,
 body.theme-ocean button:hover,
-body.theme-sunset button:hover{
+body.theme-sunset button:hover {
+  background: var(--primary);
 
-background:var(--primary);
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 BADGES
@@ -654,14 +517,11 @@ BADGES
 body.theme-light .badge,
 body.theme-midnight .badge,
 body.theme-ocean .badge,
-body.theme-sunset .badge{
+body.theme-sunset .badge {
+  background: var(--primary);
 
-background:var(--primary);
-
-color:white;
-
+  color: white;
 }
-
 
 /*=========================================================
 SCROLLBAR
@@ -670,248 +530,210 @@ SCROLLBAR
 body.theme-light ::-webkit-scrollbar-thumb,
 body.theme-midnight ::-webkit-scrollbar-thumb,
 body.theme-ocean ::-webkit-scrollbar-thumb,
-body.theme-sunset ::-webkit-scrollbar-thumb{
-
-background:var(--bg4);
-
+body.theme-sunset ::-webkit-scrollbar-thumb {
+  background: var(--bg4);
 }
 
 body.theme-light ::-webkit-scrollbar-thumb:hover,
 body.theme-midnight ::-webkit-scrollbar-thumb:hover,
 body.theme-ocean ::-webkit-scrollbar-thumb:hover,
-body.theme-sunset ::-webkit-scrollbar-thumb:hover{
-
-background:var(--primary);
-
+body.theme-sunset ::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
-
 
 /*=========================================================
 PURPLE THEME
 =========================================================*/
 
-body.theme-purple{
+body.theme-purple {
+  --bg: #160f24;
+  --bg2: #211536;
+  --bg3: #32214d;
+  --bg4: #46306b;
 
---bg:#160F24;
---bg2:#211536;
---bg3:#32214D;
---bg4:#46306B;
+  --panel: #25183d;
 
---panel:#25183D;
+  --primary: #8b5cf6;
+  --secondary: #c084fc;
 
---primary:#8B5CF6;
---secondary:#C084FC;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
 
---success:#34D399;
---warning:#FBBF24;
---danger:#F87171;
+  --text: #f5f3ff;
+  --text-muted: #c4b5fd;
 
---text:#F5F3FF;
---text-muted:#C4B5FD;
+  --border: #4c3b71;
 
---border:#4C3B71;
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
 
---shadow:
-0 18px 45px rgba(0,0,0,.40);
-
-background:var(--bg);
-color:var(--text);
-
+  background: var(--bg);
+  color: var(--text);
 }
-
 
 /*=========================================================
 EMERALD THEME
 =========================================================*/
 
-body.theme-emerald{
+body.theme-emerald {
+  --bg: #081c15;
+  --bg2: #10281f;
+  --bg3: #173a2e;
+  --bg4: #245541;
 
---bg:#081C15;
---bg2:#10281F;
---bg3:#173A2E;
---bg4:#245541;
+  --panel: #11271f;
 
---panel:#11271F;
+  --primary: #10b981;
+  --secondary: #34d399;
 
---primary:#10B981;
---secondary:#34D399;
+  --success: #22c55e;
+  --warning: #fbbf24;
+  --danger: #ef4444;
 
---success:#22C55E;
---warning:#FBBF24;
---danger:#EF4444;
+  --text: #ecfdf5;
+  --text-muted: #a7f3d0;
 
---text:#ECFDF5;
---text-muted:#A7F3D0;
+  --border: #2b5d4c;
 
---border:#2B5D4C;
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
 
---shadow:
-0 18px 45px rgba(0,0,0,.35);
-
-background:var(--bg);
-color:var(--text);
-
+  background: var(--bg);
+  color: var(--text);
 }
-
 
 /*=========================================================
 NEON THEME
 =========================================================*/
 
-body.theme-neon{
+body.theme-neon {
+  --bg: #050505;
+  --bg2: #101010;
+  --bg3: #191919;
+  --bg4: #242424;
 
---bg:#050505;
---bg2:#101010;
---bg3:#191919;
---bg4:#242424;
+  --panel: #121212;
 
---panel:#121212;
+  --primary: #00f5ff;
+  --secondary: #ff00e5;
 
---primary:#00F5FF;
---secondary:#FF00E5;
+  --success: #39ff14;
+  --warning: #ffe600;
+  --danger: #ff1744;
 
---success:#39FF14;
---warning:#FFE600;
---danger:#FF1744;
+  --text: #ffffff;
+  --text-muted: #bfbfbf;
 
---text:#FFFFFF;
---text-muted:#BFBFBF;
+  --border: #333333;
 
---border:#333333;
+  --shadow: 0 0 25px rgba(0, 245, 255, 0.25);
 
---shadow:
-0 0 25px rgba(0,245,255,.25);
-
-background:var(--bg);
-color:var(--text);
-
+  background: var(--bg);
+  color: var(--text);
 }
-
 
 /*=========================================================
 DRACULA THEME
 =========================================================*/
 
-body.theme-dracula{
+body.theme-dracula {
+  --bg: #282a36;
+  --bg2: #343746;
+  --bg3: #44475a;
+  --bg4: #565a73;
 
---bg:#282A36;
---bg2:#343746;
---bg3:#44475A;
---bg4:#565A73;
+  --panel: #343746;
 
---panel:#343746;
+  --primary: #bd93f9;
+  --secondary: #8be9fd;
 
---primary:#BD93F9;
---secondary:#8BE9FD;
+  --success: #50fa7b;
+  --warning: #f1fa8c;
+  --danger: #ff5555;
 
---success:#50FA7B;
---warning:#F1FA8C;
---danger:#FF5555;
+  --text: #f8f8f2;
+  --text-muted: #b6b6c9;
 
---text:#F8F8F2;
---text-muted:#B6B6C9;
+  --border: #4c506a;
 
---border:#4C506A;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
 
---shadow:
-0 18px 40px rgba(0,0,0,.35);
-
-background:var(--bg);
-color:var(--text);
-
+  background: var(--bg);
+  color: var(--text);
 }
-
 
 /*=========================================================
 SAKURA THEME
 =========================================================*/
 
-body.theme-sakura{
+body.theme-sakura {
+  --bg: #fff5f7;
+  --bg2: #ffecef;
+  --bg3: #ffdde5;
+  --bg4: #f8c8d8;
 
---bg:#FFF5F7;
---bg2:#FFECEF;
---bg3:#FFDDE5;
---bg4:#F8C8D8;
+  --panel: #ffffff;
 
---panel:#FFFFFF;
+  --primary: #ec4899;
+  --secondary: #fb7185;
 
---primary:#EC4899;
---secondary:#FB7185;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
 
---success:#22C55E;
---warning:#F59E0B;
---danger:#EF4444;
+  --text: #4a1d31;
+  --text-muted: #9d5c77;
 
---text:#4A1D31;
---text-muted:#9D5C77;
+  --border: #f4b6c2;
 
---border:#F4B6C2;
+  --shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 
---shadow:
-0 12px 30px rgba(0,0,0,.12);
-
-background:var(--bg);
-color:var(--text);
-
+  background: var(--bg);
+  color: var(--text);
 }
-
 
 /*=========================================================
 CYBERPUNK THEME
 =========================================================*/
 
-body.theme-cyberpunk{
+body.theme-cyberpunk {
+  --bg: #0a0014;
+  --bg2: #15002a;
+  --bg3: #230046;
+  --bg4: #37006c;
 
---bg:#0A0014;
---bg2:#15002A;
---bg3:#230046;
---bg4:#37006C;
+  --panel: #1a0033;
 
---panel:#1A0033;
+  --primary: #ff00ff;
+  --secondary: #00f5ff;
 
---primary:#FF00FF;
---secondary:#00F5FF;
+  --success: #39ff14;
+  --warning: #ffd600;
+  --danger: #ff3b5c;
 
---success:#39FF14;
---warning:#FFD600;
---danger:#FF3B5C;
+  --text: #f8f8ff;
+  --text-muted: #d1b3ff;
 
---text:#F8F8FF;
---text-muted:#D1B3FF;
+  --border: #4a1c7a;
 
---border:#4A1C7A;
+  --shadow: 0 0 35px rgba(255, 0, 255, 0.25);
 
---shadow:
-0 0 35px rgba(255,0,255,.25);
-
-background:var(--bg);
-color:var(--text);
-
+  background: var(--bg);
+  color: var(--text);
 }
-
 
 /*=========================================================
 NEON EFFECTS
 =========================================================*/
 
 body.theme-neon button:hover,
-body.theme-cyberpunk button:hover{
-
-box-shadow:
-
-0 0 18px var(--primary);
-
+body.theme-cyberpunk button:hover {
+  box-shadow: 0 0 18px var(--primary);
 }
 
 body.theme-neon .panel,
-body.theme-cyberpunk .panel{
-
-box-shadow:
-
-0 0 20px rgba(0,245,255,.15);
-
+body.theme-cyberpunk .panel {
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.15);
 }
-
 
 /*=========================================================
 SCROLLBAR
@@ -922,10 +744,8 @@ body.theme-emerald ::-webkit-scrollbar-thumb,
 body.theme-neon ::-webkit-scrollbar-thumb,
 body.theme-dracula ::-webkit-scrollbar-thumb,
 body.theme-sakura ::-webkit-scrollbar-thumb,
-body.theme-cyberpunk ::-webkit-scrollbar-thumb{
-
-background:var(--bg4);
-
+body.theme-cyberpunk ::-webkit-scrollbar-thumb {
+  background: var(--bg4);
 }
 
 body.theme-purple ::-webkit-scrollbar-thumb:hover,
@@ -933,12 +753,9 @@ body.theme-emerald ::-webkit-scrollbar-thumb:hover,
 body.theme-neon ::-webkit-scrollbar-thumb:hover,
 body.theme-dracula ::-webkit-scrollbar-thumb:hover,
 body.theme-sakura ::-webkit-scrollbar-thumb:hover,
-body.theme-cyberpunk ::-webkit-scrollbar-thumb:hover{
-
-background:var(--primary);
-
+body.theme-cyberpunk ::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
-
 
 /*=========================================================
 TIMELINE / WAVEFORM / PANELS
@@ -950,473 +767,356 @@ body.theme-neon #timelineWorkspace,
 body.theme-dracula #timelineWorkspace,
 body.theme-sakura #timelineWorkspace,
 body.theme-cyberpunk #timelineWorkspace,
-
 body.theme-purple #waveformContainer,
 body.theme-emerald #waveformContainer,
 body.theme-neon #waveformContainer,
 body.theme-dracula #waveformContainer,
 body.theme-sakura #waveformContainer,
-body.theme-cyberpunk #waveformContainer{
+body.theme-cyberpunk #waveformContainer {
+  background: var(--bg2);
 
-background:var(--bg2);
-
-border-color:var(--border);
-
+  border-color: var(--border);
 }
 
 /*=========================================================
 THEME FADE ANIMATION
 =========================================================*/
 
-body.theme-transition{
-
-animation:themeFade .35s ease;
-
+body.theme-transition {
+  animation: themeFade 0.35s ease;
 }
 
-@keyframes themeFade{
+@keyframes themeFade {
+  0% {
+    opacity: 0.92;
 
-0%{
+    filter: brightness(0.96);
+  }
 
-opacity:.92;
+  100% {
+    opacity: 1;
 
-filter:brightness(.96);
-
+    filter: brightness(1);
+  }
 }
-
-100%{
-
-opacity:1;
-
-filter:brightness(1);
-
-}
-
-}
-
 
 /*=========================================================
 ACCENT COLOR UTILITIES
 =========================================================*/
 
-.accent-primary{
-
-color:var(--primary);
-
+.accent-primary {
+  color: var(--primary);
 }
 
-.accent-secondary{
-
-color:var(--secondary);
-
+.accent-secondary {
+  color: var(--secondary);
 }
 
-.accent-success{
-
-color:var(--success);
-
+.accent-success {
+  color: var(--success);
 }
 
-.accent-warning{
-
-color:var(--warning);
-
+.accent-warning {
+  color: var(--warning);
 }
 
-.accent-danger{
-
-color:var(--danger);
-
+.accent-danger {
+  color: var(--danger);
 }
 
-.bg-primary{
-
-background:var(--primary);
-
+.bg-primary {
+  background: var(--primary);
 }
 
-.bg-secondary{
-
-background:var(--secondary);
-
+.bg-secondary {
+  background: var(--secondary);
 }
 
-.bg-success{
-
-background:var(--success);
-
+.bg-success {
+  background: var(--success);
 }
 
-.bg-warning{
+.bg-warning {
+  background: var(--warning);
 
-background:var(--warning);
-
-color:#111;
-
+  color: #111;
 }
 
-.bg-danger{
-
-background:var(--danger);
-
+.bg-danger {
+  background: var(--danger);
 }
-
 
 /*=========================================================
 BORDER UTILITIES
 =========================================================*/
 
-.border-primary{
-
-border-color:var(--primary);
-
+.border-primary {
+  border-color: var(--primary);
 }
 
-.border-secondary{
-
-border-color:var(--secondary);
-
+.border-secondary {
+  border-color: var(--secondary);
 }
 
-.border-success{
-
-border-color:var(--success);
-
+.border-success {
+  border-color: var(--success);
 }
 
-.border-warning{
-
-border-color:var(--warning);
-
+.border-warning {
+  border-color: var(--warning);
 }
 
-.border-danger{
-
-border-color:var(--danger);
-
+.border-danger {
+  border-color: var(--danger);
 }
-
 
 /*=========================================================
 GLASSMORPHISM
 =========================================================*/
 
-.glass{
+.glass {
+  background: rgba(255, 255, 255, 0.08);
 
-background:rgba(255,255,255,.08);
+  backdrop-filter: blur(18px);
 
-backdrop-filter:blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 
--webkit-backdrop-filter:blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 
-border:1px solid rgba(255,255,255,.15);
-
-box-shadow:
-
-0 12px 30px rgba(0,0,0,.18);
-
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
 }
 
-.glass-dark{
+.glass-dark {
+  background: rgba(0, 0, 0, 0.35);
 
-background:rgba(0,0,0,.35);
+  backdrop-filter: blur(18px);
 
-backdrop-filter:blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 
--webkit-backdrop-filter:blur(18px);
-
-border:1px solid rgba(255,255,255,.08);
-
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
-
 
 /*=========================================================
 HIGH CONTRAST THEME
 =========================================================*/
 
-body.theme-high-contrast{
+body.theme-high-contrast {
+  --bg: #000000;
 
---bg:#000000;
+  --bg2: #111111;
 
---bg2:#111111;
+  --bg3: #222222;
 
---bg3:#222222;
+  --bg4: #333333;
 
---bg4:#333333;
+  --panel: #111111;
 
---panel:#111111;
+  --primary: #ffff00;
 
---primary:#FFFF00;
+  --secondary: #00ffff;
 
---secondary:#00FFFF;
+  --success: #00ff00;
 
---success:#00FF00;
+  --warning: #ffa500;
 
---warning:#FFA500;
+  --danger: #ff0000;
 
---danger:#FF0000;
+  --text: #ffffff;
 
---text:#FFFFFF;
+  --text-muted: #dddddd;
 
---text-muted:#DDDDDD;
+  --border: #ffffff;
 
---border:#FFFFFF;
+  background: var(--bg);
 
-background:var(--bg);
-
-color:var(--text);
-
+  color: var(--text);
 }
 
-body.theme-high-contrast button{
+body.theme-high-contrast button {
+  border: 2px solid var(--text);
 
-border:2px solid var(--text);
-
-font-weight:700;
-
+  font-weight: 700;
 }
 
-body.theme-high-contrast a{
-
-text-decoration:underline;
-
+body.theme-high-contrast a {
+  text-decoration: underline;
 }
-
 
 /*=========================================================
 PRINT THEME
 =========================================================*/
 
-@media print{
+@media print {
+  body {
+    background: #ffffff !important;
 
-body{
+    color: #000000 !important;
+  }
 
-background:#FFFFFF !important;
+  .panel,
+  .effect-card,
+  .asset-card {
+    box-shadow: none !important;
 
-color:#000000 !important;
+    border: 1px solid #cccccc;
 
+    background: #ffffff !important;
+  }
+
+  button,
+  .toolbar,
+  .editor-toolbar,
+  .preview-toolbar,
+  .side-toolbar {
+    display: none !important;
+  }
 }
-
-.panel,
-.effect-card,
-.asset-card{
-
-box-shadow:none !important;
-
-border:1px solid #CCCCCC;
-
-background:#FFFFFF !important;
-
-}
-
-button,
-.toolbar,
-.editor-toolbar,
-.preview-toolbar,
-.side-toolbar{
-
-display:none !important;
-
-}
-
-}
-
 
 /*=========================================================
 HOVER EFFECTS
 =========================================================*/
 
-.theme-card{
+.theme-card {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 
-transition:
-
-transform .25s ease,
-
-box-shadow .25s ease;
-
-cursor:pointer;
-
+  cursor: pointer;
 }
 
-.theme-card:hover{
+.theme-card:hover {
+  transform: translateY(-4px);
 
-transform:translateY(-4px);
-
-box-shadow:
-
-0 18px 35px rgba(0,0,0,.22);
-
+  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.22);
 }
-
 
 /*=========================================================
 ACTIVE THEME CARD
 =========================================================*/
 
-.theme-card.active{
+.theme-card.active {
+  border: 2px solid var(--primary);
 
-border:2px solid var(--primary);
-
-box-shadow:
-
-0 0 20px rgba(79,124,255,.30);
-
+  box-shadow: 0 0 20px rgba(79, 124, 255, 0.3);
 }
-
 
 /*=========================================================
 THEME PREVIEW
 =========================================================*/
 
-.theme-preview{
+.theme-preview {
+  display: grid;
 
-display:grid;
+  grid-template-columns: repeat(4, 1fr);
 
-grid-template-columns:repeat(4,1fr);
+  gap: 4px;
 
-gap:4px;
+  height: 60px;
 
-height:60px;
+  border-radius: 10px;
 
-border-radius:10px;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
 
-.theme-preview span:nth-child(1){
-
-background:var(--bg);
-
+.theme-preview span:nth-child(1) {
+  background: var(--bg);
 }
 
-.theme-preview span:nth-child(2){
-
-background:var(--bg2);
-
+.theme-preview span:nth-child(2) {
+  background: var(--bg2);
 }
 
-.theme-preview span:nth-child(3){
-
-background:var(--primary);
-
+.theme-preview span:nth-child(3) {
+  background: var(--primary);
 }
 
-.theme-preview span:nth-child(4){
-
-background:var(--secondary);
-
+.theme-preview span:nth-child(4) {
+  background: var(--secondary);
 }
-
 
 /*=========================================================
 CUSTOM THEME PLACEHOLDER
 =========================================================*/
 
-body.theme-custom{
+body.theme-custom {
+  --bg: #101418;
 
---bg:#101418;
+  --bg2: #171c22;
 
---bg2:#171C22;
+  --bg3: #232c35;
 
---bg3:#232C35;
+  --bg4: #34414f;
 
---bg4:#34414F;
+  --panel: #1b222b;
 
---panel:#1B222B;
+  --primary: #4f7cff;
 
---primary:#4F7CFF;
+  --secondary: #00d9ff;
 
---secondary:#00D9FF;
+  --success: #14c38e;
 
---success:#14C38E;
+  --warning: #ffd43b;
 
---warning:#FFD43B;
+  --danger: #e74c3c;
 
---danger:#E74C3C;
+  --text: #ffffff;
 
---text:#FFFFFF;
+  --text-muted: #98a2b3;
 
---text-muted:#98A2B3;
-
---border:#2D3444;
-
+  --border: #2d3444;
 }
-
 
 /*=========================================================
 THEME SWITCH BUTTON
 =========================================================*/
 
-.theme-switch{
+.theme-switch {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  gap: 10px;
 
-gap:10px;
+  padding: 10px 18px;
 
-padding:10px 18px;
+  border-radius: 30px;
 
-border-radius:30px;
+  background: var(--bg3);
 
-background:var(--bg3);
+  cursor: pointer;
 
-cursor:pointer;
-
-transition:.25s;
-
+  transition: 0.25s;
 }
 
-.theme-switch:hover{
+.theme-switch:hover {
+  background: var(--primary);
 
-background:var(--primary);
-
-color:#FFF;
-
+  color: #fff;
 }
-
 
 /*=========================================================
 PERFORMANCE
 =========================================================*/
 
 body,
-
 .panel,
-
 button,
-
 .asset-card,
-
 .effect-card,
+.timeline-clip {
+  transform: translateZ(0);
 
-.timeline-clip{
+  backface-visibility: hidden;
 
-transform:translateZ(0);
-
-backface-visibility:hidden;
-
-will-change:
-
-background,
-
-color,
-
-border-color;
-
+  will-change: background, color, border-color;
 }
-
 
 /*=========================================================
 SELECTION
 =========================================================*/
 
-::selection{
+::selection {
+  background: var(--primary);
 
-background:var(--primary);
-
-color:#FFFFFF;
-
+  color: #ffffff;
 }
-
