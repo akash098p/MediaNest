@@ -1,44 +1,56 @@
 /* notification.css */
 .notification {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 12px 24px;
-    border-radius: 8px;
-    animation: slide-in 0.3s forwards;
-    z-index: 9999;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 8px;
+  animation: slide-in 0.3s forwards;
+  z-index: 9999;
 }
 
 .info {
-    background-color: #dcf8c6;
-    color: #388e3c;
-    border: 1px solid #bcaaa4;
+  background-color: #dcf8c6;
+  color: #388e3c;
+  border: 1px solid #bcaaa4;
 }
 
 .success {
-    background-color: #c8f0f0;
-    color: #008000;
-    border: 1px solid #81c784;
+  background-color: #c8f0f0;
+  color: #008000;
+  border: 1px solid #81c784;
 }
 
 .error {
-    background-color: #ffdddd;
-    color: #c62828;
-    border: 1px solid #ef5350;
+  background-color: #ffdddd;
+  color: #c62828;
+  border: 1px solid #ef5350;
 }
 
 .explosion {
-    animation: burst 1.5s forwards;
-    border: 2px solid #f44336;
+  animation: burst 1.5s forwards;
+  border: 2px solid #f44336;
 }
 
 @keyframes slide-in {
-    from { bottom: -40px; opacity: 0; }
-    to { bottom: 20px; opacity: 1; }
+  from {
+    bottom: -40px;
+    opacity: 0;
+  }
+  to {
+    bottom: 20px;
+    opacity: 1;
+  }
 }
 
 @keyframes burst {
-    0% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(1.5); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
 }
