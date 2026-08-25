@@ -2,400 +2,331 @@
 WAVEFORM WORKSPACE
 =========================================================*/
 
-#waveformContainer{
+#waveformContainer {
+  position: relative;
 
-position:relative;
+  width: 100%;
 
-width:100%;
+  height: 240px;
 
-height:240px;
+  background: #11161f;
 
-background:#11161F;
+  border-radius: 16px;
 
-border-radius:16px;
+  overflow: hidden;
 
-overflow:hidden;
+  border: 1px solid #2a3242;
 
-border:1px solid #2A3242;
+  display: flex;
 
-display:flex;
+  justify-content: center;
 
-justify-content:center;
-
-align-items:center;
-
+  align-items: center;
 }
-
 
 /*=========================================================
 CANVAS
 =========================================================*/
 
-#waveformCanvas{
+#waveformCanvas {
+  width: 100%;
 
-width:100%;
+  height: 100%;
 
-height:100%;
+  display: block;
 
-display:block;
-
-cursor:crosshair;
-
+  cursor: crosshair;
 }
-
 
 /*=========================================================
 BACKGROUND GRID
 =========================================================*/
 
-.waveform-grid{
+.waveform-grid {
+  position: absolute;
 
-position:absolute;
+  inset: 0;
 
-inset:0;
+  pointer-events: none;
 
-pointer-events:none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 
-background-image:
-
-linear-gradient(
-to right,
-rgba(255,255,255,.04) 1px,
-transparent 1px),
-
-linear-gradient(
-to bottom,
-rgba(255,255,255,.03) 1px,
-transparent 1px);
-
-background-size:
-
-40px 100%,
-100% 40px;
-
+  background-size:
+    40px 100%,
+    100% 40px;
 }
-
 
 /*=========================================================
 CENTER LINE
 =========================================================*/
 
-.wave-center{
+.wave-center {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  top: 50%;
 
-top:50%;
+  height: 1px;
 
-height:1px;
-
-background:rgba(255,255,255,.08);
-
+  background: rgba(255, 255, 255, 0.08);
 }
-
 
 /*=========================================================
 TIME RULER
 =========================================================*/
 
-.wave-ruler{
+.wave-ruler {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  height: 30px;
 
-height:30px;
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  background: rgba(0, 0, 0, 0.35);
 
-background:rgba(0,0,0,.35);
+  backdrop-filter: blur(10px);
 
-backdrop-filter:blur(10px);
-
-border-bottom:1px solid rgba(255,255,255,.05);
-
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.wave-ruler span{
+.wave-ruler span {
+  width: 80px;
 
-width:80px;
+  text-align: center;
 
-text-align:center;
+  font-size: 11px;
 
-font-size:11px;
+  font-family: Consolas, monospace;
 
-font-family:Consolas, monospace;
-
-color:#98A2B3;
-
+  color: #98a2b3;
 }
-
 
 /*=========================================================
 PLAYHEAD
 =========================================================*/
 
-.wave-playhead{
+.wave-playhead {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 2px;
 
-width:2px;
+  background: #ff4d4d;
 
-background:#FF4D4D;
+  z-index: 50;
 
-z-index:50;
-
-box-shadow:
-
-0 0 10px rgba(255,77,77,.6);
-
+  box-shadow: 0 0 10px rgba(255, 77, 77, 0.6);
 }
 
-.wave-playhead::before{
+.wave-playhead::before {
+  content: "";
 
-content:"";
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  left: -6px;
 
-left:-6px;
+  width: 14px;
 
-width:14px;
+  height: 14px;
 
-height:14px;
+  background: #ff4d4d;
 
-background:#FF4D4D;
-
-transform:rotate(45deg);
-
+  transform: rotate(45deg);
 }
-
 
 /*=========================================================
 SELECTION
 =========================================================*/
 
-.wave-selection{
+.wave-selection {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  background: rgba(0, 217, 255, 0.15);
 
-background:rgba(0,217,255,.15);
+  border-left: 2px solid #00d9ff;
 
-border-left:2px solid #00D9FF;
-
-border-right:2px solid #00D9FF;
-
+  border-right: 2px solid #00d9ff;
 }
-
 
 /*=========================================================
 SELECTION HANDLES
 =========================================================*/
 
-.wave-handle{
+.wave-handle {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 8px;
 
-width:8px;
+  background: #00d9ff;
 
-background:#00D9FF;
-
-cursor:ew-resize;
-
+  cursor: ew-resize;
 }
 
-.wave-handle.left{
-
-left:0;
-
+.wave-handle.left {
+  left: 0;
 }
 
-.wave-handle.right{
-
-right:0;
-
+.wave-handle.right {
+  right: 0;
 }
-
 
 /*=========================================================
 ZOOM BAR
 =========================================================*/
 
-.wave-zoom{
+.wave-zoom {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  gap: 12px;
 
-gap:12px;
+  padding: 12px 20px;
 
-padding:12px 20px;
+  background: #1a1f2a;
 
-background:#1A1F2A;
-
-border-top:1px solid #2A3242;
-
+  border-top: 1px solid #2a3242;
 }
 
-.wave-zoom input{
+.wave-zoom input {
+  flex: 1;
 
-flex:1;
-
-accent-color:#4F7CFF;
-
+  accent-color: #4f7cff;
 }
-
 
 /*=========================================================
 TIME DISPLAY
 =========================================================*/
 
-.wave-time{
+.wave-time {
+  font-family: Consolas, monospace;
 
-font-family:Consolas, monospace;
+  font-size: 13px;
 
-font-size:13px;
+  font-weight: 600;
 
-font-weight:600;
+  color: white;
 
-color:white;
+  padding: 8px 12px;
 
-padding:8px 12px;
+  background: #2d3444;
 
-background:#2D3444;
-
-border-radius:10px;
-
+  border-radius: 10px;
 }
-
 
 /*=========================================================
 CURSOR STATES
 =========================================================*/
 
-.wave-drag{
-
-cursor:grab;
-
+.wave-drag {
+  cursor: grab;
 }
 
-.wave-resize{
-
-cursor:ew-resize;
-
+.wave-resize {
+  cursor: ew-resize;
 }
 
-.wave-select{
-
-cursor:crosshair;
-
+.wave-select {
+  cursor: crosshair;
 }
-
 
 /*=========================================================
 MARKERS
 =========================================================*/
 
-.wave-marker{
+.wave-marker {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 2px;
 
-width:2px;
-
-background:#FFD43B;
-
+  background: #ffd43b;
 }
 
-.wave-marker::before{
+.wave-marker::before {
+  content: "";
 
-content:"";
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  left: -5px;
 
-left:-5px;
+  width: 12px;
 
-width:12px;
+  height: 12px;
 
-height:12px;
+  background: #ffd43b;
 
-background:#FFD43B;
-
-transform:rotate(45deg);
-
+  transform: rotate(45deg);
 }
-
 
 /*=========================================================
 BEAT MARKER
 =========================================================*/
 
-.beat-marker{
+.beat-marker {
+  position: absolute;
 
-position:absolute;
+  bottom: 0;
 
-bottom:0;
+  width: 2px;
 
-width:2px;
+  height: 30px;
 
-height:30px;
-
-background:#14C38E;
-
+  background: #14c38e;
 }
-
 
 /*=========================================================
 REGION LABEL
 =========================================================*/
 
-.wave-label{
+.wave-label {
+  position: absolute;
 
-position:absolute;
+  top: 34px;
 
-top:34px;
+  padding: 4px 10px;
 
-padding:4px 10px;
+  background: #00d9ff;
 
-background:#00D9FF;
+  color: #111;
 
-color:#111;
+  font-size: 11px;
 
-font-size:11px;
+  font-weight: 600;
 
-font-weight:600;
-
-border-radius:6px;
-
+  border-radius: 6px;
 }
-
 
 /*=========================================================
 GPU OPTIMIZATION
@@ -403,390 +334,314 @@ GPU OPTIMIZATION
 
 #waveformCanvas,
 .wave-selection,
-.wave-playhead{
+.wave-playhead {
+  transform: translateZ(0);
 
-transform:translateZ(0);
+  will-change: transform;
 
-will-change:transform;
-
-backface-visibility:hidden;
-
+  backface-visibility: hidden;
 }
-
 
 /*=========================================================
 SPECTRUM CONTAINER
 =========================================================*/
 
-#spectrumContainer{
+#spectrumContainer {
+  position: relative;
 
-position:relative;
+  width: 100%;
 
-width:100%;
+  height: 240px;
 
-height:240px;
+  background: #11161f;
 
-background:#11161F;
+  border-radius: 16px;
 
-border-radius:16px;
+  overflow: hidden;
 
-overflow:hidden;
+  border: 1px solid #2a3242;
 
-border:1px solid #2A3242;
-
-margin-top:20px;
-
+  margin-top: 20px;
 }
-
 
 /*=========================================================
 SPECTRUM CANVAS
 =========================================================*/
 
-#spectrumCanvas{
+#spectrumCanvas {
+  width: 100%;
 
-width:100%;
+  height: 100%;
 
-height:100%;
-
-display:block;
-
+  display: block;
 }
-
 
 /*=========================================================
 FFT GRID
 =========================================================*/
 
-.spectrum-grid{
+.spectrum-grid {
+  position: absolute;
 
-position:absolute;
+  inset: 0;
 
-inset:0;
+  pointer-events: none;
 
-pointer-events:none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 
-background-image:
-
-linear-gradient(
-to right,
-rgba(255,255,255,.04) 1px,
-transparent 1px),
-
-linear-gradient(
-to bottom,
-rgba(255,255,255,.03) 1px,
-transparent 1px);
-
-background-size:
-
-50px 100%,
-100% 30px;
-
+  background-size:
+    50px 100%,
+    100% 30px;
 }
-
 
 /*=========================================================
 FREQUENCY LABELS
 =========================================================*/
 
-.frequency-scale{
+.frequency-scale {
+  position: absolute;
 
-position:absolute;
+  bottom: 0;
 
-bottom:0;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  height: 30px;
 
-height:30px;
+  display: flex;
 
-display:flex;
+  justify-content: space-between;
 
-justify-content:space-between;
+  padding: 0 12px;
 
-padding:0 12px;
+  background: rgba(0, 0, 0, 0.45);
 
-background:rgba(0,0,0,.45);
-
-backdrop-filter:blur(10px);
-
+  backdrop-filter: blur(10px);
 }
 
-.frequency-scale span{
+.frequency-scale span {
+  font-size: 11px;
 
-font-size:11px;
+  color: #98a2b3;
 
-color:#98A2B3;
-
-font-family:Consolas, monospace;
-
+  font-family: Consolas, monospace;
 }
-
 
 /*=========================================================
 OSCILLOSCOPE
 =========================================================*/
 
-#oscilloscopeContainer{
+#oscilloscopeContainer {
+  position: relative;
 
-position:relative;
+  width: 100%;
 
-width:100%;
+  height: 180px;
 
-height:180px;
+  background: #11161f;
 
-background:#11161F;
+  border-radius: 16px;
 
-border-radius:16px;
+  margin-top: 20px;
 
-margin-top:20px;
+  overflow: hidden;
 
-overflow:hidden;
-
-border:1px solid #2A3242;
-
+  border: 1px solid #2a3242;
 }
 
-#oscilloscopeCanvas{
+#oscilloscopeCanvas {
+  width: 100%;
 
-width:100%;
+  height: 100%;
 
-height:100%;
-
-display:block;
-
+  display: block;
 }
-
 
 /*=========================================================
 OSCILLOSCOPE CENTER
 =========================================================*/
 
-.osc-center{
+.osc-center {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  top: 50%;
 
-top:50%;
+  height: 1px;
 
-height:1px;
-
-background:rgba(255,255,255,.08);
-
+  background: rgba(255, 255, 255, 0.08);
 }
-
 
 /*=========================================================
 PEAK METER
 =========================================================*/
 
-.peak-meter{
+.peak-meter {
+  display: flex;
 
-display:flex;
+  gap: 8px;
 
-gap:8px;
+  align-items: flex-end;
 
-align-items:flex-end;
+  height: 180px;
 
-height:180px;
+  padding: 20px;
 
-padding:20px;
+  background: #171c26;
 
-background:#171C26;
+  border-radius: 16px;
 
-border-radius:16px;
-
-margin-top:20px;
-
+  margin-top: 20px;
 }
 
-.peak-bar{
+.peak-bar {
+  width: 18px;
 
-width:18px;
+  background: linear-gradient(
+    to top,
 
-background:
+    #14c38e,
+    #ffd43b,
+    #e74c3c
+  );
 
-linear-gradient(
+  border-radius: 12px 12px 0 0;
 
-to top,
-
-#14C38E,
-
-#FFD43B,
-
-#E74C3C);
-
-border-radius:12px 12px 0 0;
-
-transition:height .08s linear;
-
+  transition: height 0.08s linear;
 }
-
 
 /*=========================================================
 RMS METER
 =========================================================*/
 
-.rms-meter{
+.rms-meter {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  gap: 12px;
 
-gap:12px;
+  margin-top: 20px;
 
-margin-top:20px;
+  padding: 16px;
 
-padding:16px;
+  background: #1a1f2a;
 
-background:#1A1F2A;
-
-border-radius:14px;
-
+  border-radius: 14px;
 }
 
-.rms-value{
+.rms-value {
+  font-family: Consolas, monospace;
 
-font-family:Consolas, monospace;
+  font-size: 18px;
 
-font-size:18px;
+  font-weight: 700;
 
-font-weight:700;
-
-color:#FFF;
-
+  color: #fff;
 }
-
 
 /*=========================================================
 STEREO BALANCE
 =========================================================*/
 
-.stereo-meter{
+.stereo-meter {
+  display: grid;
 
-display:grid;
+  grid-template-columns: 1fr 1fr;
 
-grid-template-columns:1fr 1fr;
+  gap: 16px;
 
-gap:16px;
-
-margin-top:20px;
-
+  margin-top: 20px;
 }
 
-.stereo-channel{
+.stereo-channel {
+  background: #1a1f2a;
 
-background:#1A1F2A;
+  padding: 16px;
 
-padding:16px;
-
-border-radius:14px;
-
+  border-radius: 14px;
 }
 
-.stereo-bar{
+.stereo-bar {
+  height: 12px;
 
-height:12px;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 20px;
 
-border-radius:20px;
+  overflow: hidden;
 
-overflow:hidden;
-
-margin-top:10px;
-
+  margin-top: 10px;
 }
 
-.stereo-fill{
+.stereo-fill {
+  height: 100%;
 
-height:100%;
+  width: 50%;
 
-width:50%;
-
-background:
-
-linear-gradient(
-
-90deg,
-
-#4F7CFF,
-
-#00D9FF);
-
+  background: linear-gradient(90deg, #4f7cff, #00d9ff);
 }
-
 
 /*=========================================================
 FREQUENCY BANDS
 =========================================================*/
 
-.frequency-bands{
+.frequency-bands {
+  display: flex;
 
-display:flex;
+  justify-content: space-between;
 
-justify-content:space-between;
+  align-items: flex-end;
 
-align-items:flex-end;
+  height: 180px;
 
-height:180px;
+  padding: 20px;
 
-padding:20px;
-
-gap:6px;
-
+  gap: 6px;
 }
 
-.band{
+.band {
+  flex: 1;
 
-flex:1;
+  background: linear-gradient(
+    to top,
 
-background:
+    #4f7cff,
+    #00d9ff
+  );
 
-linear-gradient(
+  border-radius: 8px 8px 0 0;
 
-to top,
-
-#4F7CFF,
-
-#00D9FF);
-
-border-radius:8px 8px 0 0;
-
-transition:height .08s linear;
-
+  transition: height 0.08s linear;
 }
-
 
 /*=========================================================
 LIVE STATUS
 =========================================================*/
 
-.visualizer-status{
+.visualizer-status {
+  position: absolute;
 
-position:absolute;
+  top: 12px;
 
-top:12px;
+  right: 12px;
 
-right:12px;
+  padding: 6px 12px;
 
-padding:6px 12px;
+  background: rgba(0, 0, 0, 0.45);
 
-background:rgba(0,0,0,.45);
+  border-radius: 10px;
 
-border-radius:10px;
+  font-size: 12px;
 
-font-size:12px;
-
-color:#FFF;
-
+  color: #fff;
 }
-
 
 /*=========================================================
 GPU OPTIMIZATION
@@ -795,520 +650,398 @@ GPU OPTIMIZATION
 #spectrumCanvas,
 #oscilloscopeCanvas,
 .band,
-.peak-bar{
+.peak-bar {
+  transform: translateZ(0);
 
-transform:translateZ(0);
+  will-change: height, transform;
 
-will-change:height,transform;
-
-backface-visibility:hidden;
-
+  backface-visibility: hidden;
 }
 
 /*=========================================================
 LUFS METER
 =========================================================*/
 
-.lufs-meter{
+.lufs-meter {
+  display: flex;
 
-display:flex;
+  align-items: center;
 
-align-items:center;
+  gap: 18px;
 
-gap:18px;
+  padding: 18px;
 
-padding:18px;
+  margin-top: 20px;
 
-margin-top:20px;
+  background: #171c26;
 
-background:#171C26;
-
-border-radius:16px;
-
+  border-radius: 16px;
 }
 
-.lufs-gauge{
+.lufs-gauge {
+  flex: 1;
 
-flex:1;
+  height: 14px;
 
-height:14px;
+  background: #2d3444;
 
-background:#2D3444;
+  border-radius: 20px;
 
-border-radius:20px;
+  overflow: hidden;
 
-overflow:hidden;
-
-position:relative;
-
+  position: relative;
 }
 
-.lufs-fill{
+.lufs-fill {
+  height: 100%;
 
-height:100%;
+  width: 35%;
 
-width:35%;
+  background: linear-gradient(90deg, #14c38e, #ffd43b, #e74c3c);
 
-background:
-
-linear-gradient(
-
-90deg,
-
-#14C38E,
-
-#FFD43B,
-
-#E74C3C);
-
-transition:width .12s linear;
-
+  transition: width 0.12s linear;
 }
 
-.lufs-value{
+.lufs-value {
+  font-family: Consolas, monospace;
 
-font-family:Consolas, monospace;
+  font-size: 18px;
 
-font-size:18px;
+  font-weight: 700;
 
-font-weight:700;
-
-color:#FFF;
-
+  color: #fff;
 }
-
 
 /*=========================================================
 LOOP REGION
 =========================================================*/
 
-.loop-region{
+.loop-region {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  background: rgba(79, 124, 255, 0.15);
 
-background:rgba(79,124,255,.15);
+  border-left: 2px solid #4f7cff;
 
-border-left:2px solid #4F7CFF;
+  border-right: 2px solid #4f7cff;
 
-border-right:2px solid #4F7CFF;
-
-pointer-events:none;
-
+  pointer-events: none;
 }
 
 .loop-start,
-.loop-end{
+.loop-end {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 4px;
 
-width:4px;
-
-background:#4F7CFF;
-
+  background: #4f7cff;
 }
-
 
 /*=========================================================
 BEAT DETECTION
 =========================================================*/
 
-.beat-grid{
+.beat-grid {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  bottom: 0;
 
-bottom:0;
+  height: 36px;
 
-height:36px;
-
-pointer-events:none;
-
+  pointer-events: none;
 }
 
-.beat-line{
+.beat-line {
+  position: absolute;
 
-position:absolute;
+  width: 2px;
 
-width:2px;
+  background: #14c38e;
 
-background:#14C38E;
+  bottom: 0;
 
-bottom:0;
+  height: 36px;
 
-height:36px;
-
-opacity:.8;
-
+  opacity: 0.8;
 }
 
-.beat-number{
+.beat-number {
+  position: absolute;
 
-position:absolute;
+  bottom: 38px;
 
-bottom:38px;
+  font-size: 10px;
 
-font-size:10px;
+  color: #14c38e;
 
-color:#14C38E;
-
-font-family:Consolas, monospace;
-
+  font-family: Consolas, monospace;
 }
-
 
 /*=========================================================
 SILENCE DETECTION
 =========================================================*/
 
-.silence-region{
+.silence-region {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  background: rgba(231, 76, 60, 0.08);
 
-background:rgba(231,76,60,.08);
+  border-left: 2px dashed #e74c3c;
 
-border-left:2px dashed #E74C3C;
-
-border-right:2px dashed #E74C3C;
-
+  border-right: 2px dashed #e74c3c;
 }
 
-.silence-label{
+.silence-label {
+  position: absolute;
 
-position:absolute;
+  top: 10px;
 
-top:10px;
+  padding: 4px 10px;
 
-padding:4px 10px;
+  border-radius: 6px;
 
-border-radius:6px;
+  background: #e74c3c;
 
-background:#E74C3C;
+  color: #fff;
 
-color:#FFF;
-
-font-size:11px;
-
+  font-size: 11px;
 }
-
 
 /*=========================================================
 TRIM OVERLAY
 =========================================================*/
 
-.wave-trim{
+.wave-trim {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  background: rgba(255, 255, 255, 0.08);
 
-background:rgba(255,255,255,.08);
-
-pointer-events:none;
-
+  pointer-events: none;
 }
 
-.wave-trim.left{
-
-left:0;
-
+.wave-trim.left {
+  left: 0;
 }
 
-.wave-trim.right{
-
-right:0;
-
+.wave-trim.right {
+  right: 0;
 }
-
 
 /*=========================================================
 FADE VISUALIZATION
 =========================================================*/
 
-.fade-curve{
+.fade-curve {
+  position: absolute;
 
-position:absolute;
+  bottom: 0;
 
-bottom:0;
+  height: 100%;
 
-height:100%;
+  width: 80px;
 
-width:80px;
-
-pointer-events:none;
-
+  pointer-events: none;
 }
 
-.fade-in-curve{
+.fade-in-curve {
+  left: 0;
 
-left:0;
-
-background:
-
-linear-gradient(
-
-90deg,
-
-rgba(255,255,255,.45),
-
-transparent);
-
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.45), transparent);
 }
 
-.fade-out-curve{
+.fade-out-curve {
+  right: 0;
 
-right:0;
-
-background:
-
-linear-gradient(
-
-270deg,
-
-rgba(255,255,255,.45),
-
-transparent);
-
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.45), transparent);
 }
-
 
 /*=========================================================
 AUDIO REGIONS
 =========================================================*/
 
-.audio-region{
+.audio-region {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  border-radius: 8px;
 
-border-radius:8px;
+  background: rgba(20, 195, 142, 0.12);
 
-background:rgba(20,195,142,.12);
-
-border:2px solid #14C38E;
-
+  border: 2px solid #14c38e;
 }
 
-.audio-region.active{
+.audio-region.active {
+  border-color: #00d9ff;
 
-border-color:#00D9FF;
-
-box-shadow:
-
-0 0 20px rgba(0,217,255,.25);
-
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.25);
 }
-
 
 /*=========================================================
 REGION LABEL
 =========================================================*/
 
-.region-name{
+.region-name {
+  position: absolute;
 
-position:absolute;
+  top: 8px;
 
-top:8px;
+  left: 8px;
 
-left:8px;
+  padding: 4px 8px;
 
-padding:4px 8px;
+  background: #14c38e;
 
-background:#14C38E;
+  border-radius: 6px;
 
-border-radius:6px;
+  font-size: 11px;
 
-font-size:11px;
+  font-weight: 600;
 
-font-weight:600;
-
-color:#111;
-
+  color: #111;
 }
-
 
 /*=========================================================
 ZOOM LEVELS
 =========================================================*/
 
-.wave-zoom-50{
-
-background-size:
-
-80px 100%,
-
-100% 40px;
-
+.wave-zoom-50 {
+  background-size:
+    80px 100%,
+    100% 40px;
 }
 
-.wave-zoom-100{
-
-background-size:
-
-40px 100%,
-
-100% 40px;
-
+.wave-zoom-100 {
+  background-size:
+    40px 100%,
+    100% 40px;
 }
 
-.wave-zoom-200{
-
-background-size:
-
-20px 100%,
-
-100% 40px;
-
+.wave-zoom-200 {
+  background-size:
+    20px 100%,
+    100% 40px;
 }
 
-.wave-zoom-400{
-
-background-size:
-
-10px 100%,
-
-100% 40px;
-
+.wave-zoom-400 {
+  background-size:
+    10px 100%,
+    100% 40px;
 }
-
 
 /*=========================================================
 PLAYBACK CURSOR
 =========================================================*/
 
-.playback-cursor{
+.playback-cursor {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 2px;
 
-width:2px;
+  background: #ff4d4d;
 
-background:#FF4D4D;
-
-box-shadow:
-
-0 0 16px rgba(255,77,77,.5);
-
+  box-shadow: 0 0 16px rgba(255, 77, 77, 0.5);
 }
-
 
 /*=========================================================
 HOVER REGION
 =========================================================*/
 
-.wave-hover{
+.wave-hover {
+  position: absolute;
 
-position:absolute;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 2px;
 
-width:2px;
+  background: #ffd43b;
 
-background:#FFD43B;
+  pointer-events: none;
 
-pointer-events:none;
-
-opacity:.7;
-
+  opacity: 0.7;
 }
-
 
 /*=========================================================
 SELECTION GLOW
 =========================================================*/
 
-.wave-selection{
-
-box-shadow:
-
-0 0 18px rgba(0,217,255,.25);
-
+.wave-selection {
+  box-shadow: 0 0 18px rgba(0, 217, 255, 0.25);
 }
-
 
 /*=========================================================
 AUDIO TAGS
 =========================================================*/
 
-.audio-tag{
+.audio-tag {
+  position: absolute;
 
-position:absolute;
+  bottom: 8px;
 
-bottom:8px;
+  padding: 4px 8px;
 
-padding:4px 8px;
+  border-radius: 6px;
 
-border-radius:6px;
+  background: #ffd43b;
 
-background:#FFD43B;
+  color: #111;
 
-color:#111;
+  font-size: 10px;
 
-font-size:10px;
-
-font-weight:600;
-
+  font-weight: 600;
 }
-
 
 /*=========================================================
 ANIMATIONS
 =========================================================*/
 
-@keyframes meterPulse{
+@keyframes meterPulse {
+  0% {
+    opacity: 0.75;
+  }
 
-0%{
+  50% {
+    opacity: 1;
+  }
 
-opacity:.75;
-
-}
-
-50%{
-
-opacity:1;
-
-}
-
-100%{
-
-opacity:.75;
-
-}
-
+  100% {
+    opacity: 0.75;
+  }
 }
 
 .lufs-fill,
 .stereo-fill,
-.peak-bar{
-
-animation:meterPulse 1.5s infinite;
-
+.peak-bar {
+  animation: meterPulse 1.5s infinite;
 }
-
 
 /*=========================================================
 GPU OPTIMIZATION
@@ -1317,427 +1050,337 @@ GPU OPTIMIZATION
 .wave-playhead,
 .playback-cursor,
 .audio-region,
-.wave-selection{
+.wave-selection {
+  transform: translateZ(0);
 
-transform:translateZ(0);
+  backface-visibility: hidden;
 
-backface-visibility:hidden;
-
-will-change:transform,left,width;
-
+  will-change: transform, left, width;
 }
-
 
 /*=========================================================
 SPECTROGRAM
 =========================================================*/
 
-#spectrogramContainer{
+#spectrogramContainer {
+  position: relative;
 
-position:relative;
+  width: 100%;
 
-width:100%;
+  height: 260px;
 
-height:260px;
+  margin-top: 20px;
 
-margin-top:20px;
+  background: #0f131a;
 
-background:#0F131A;
+  border: 1px solid #2a3242;
 
-border:1px solid #2A3242;
+  border-radius: 16px;
 
-border-radius:16px;
-
-overflow:hidden;
-
+  overflow: hidden;
 }
 
-#spectrogramCanvas{
+#spectrogramCanvas {
+  width: 100%;
 
-width:100%;
+  height: 100%;
 
-height:100%;
-
-display:block;
-
+  display: block;
 }
 
-.spectrogram-scale{
+.spectrogram-scale {
+  position: absolute;
 
-position:absolute;
+  right: 0;
 
-right:0;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  width: 45px;
 
-width:45px;
+  display: flex;
 
-display:flex;
+  flex-direction: column;
 
-flex-direction:column;
+  justify-content: space-between;
 
-justify-content:space-between;
+  align-items: center;
 
-align-items:center;
+  background: rgba(0, 0, 0, 0.45);
 
-background:rgba(0,0,0,.45);
-
-backdrop-filter:blur(10px);
-
+  backdrop-filter: blur(10px);
 }
 
-.spectrogram-scale span{
+.spectrogram-scale span {
+  font-size: 11px;
 
-font-size:11px;
+  color: #98a2b3;
 
-color:#98A2B3;
-
-font-family:Consolas, monospace;
-
+  font-family: Consolas, monospace;
 }
-
 
 /*=========================================================
 MULTI CHANNEL
 =========================================================*/
 
-.multi-channel{
+.multi-channel {
+  display: grid;
 
-display:grid;
+  grid-template-columns: 1fr;
 
-grid-template-columns:1fr;
+  gap: 18px;
 
-gap:18px;
-
-margin-top:20px;
-
+  margin-top: 20px;
 }
 
-.channel-wave{
+.channel-wave {
+  position: relative;
 
-position:relative;
+  height: 120px;
 
-height:120px;
+  background: #171c26;
 
-background:#171C26;
+  border-radius: 14px;
 
-border-radius:14px;
+  overflow: hidden;
 
-overflow:hidden;
-
-border:1px solid #2A3242;
-
+  border: 1px solid #2a3242;
 }
 
-.channel-title{
+.channel-title {
+  position: absolute;
 
-position:absolute;
+  left: 12px;
 
-left:12px;
+  top: 10px;
 
-top:10px;
+  font-size: 12px;
 
-font-size:12px;
+  font-weight: 600;
 
-font-weight:600;
+  color: #fff;
 
-color:#FFF;
-
-z-index:5;
-
+  z-index: 5;
 }
-
 
 /*=========================================================
 LIVE WAVEFORM
 =========================================================*/
 
-.live-wave{
+.live-wave {
+  position: absolute;
 
-position:absolute;
+  left: 0;
 
-left:0;
+  right: 0;
 
-right:0;
+  top: 0;
 
-top:0;
+  bottom: 0;
 
-bottom:0;
+  opacity: 0.95;
 
-opacity:.95;
-
-animation:waveGlow 2s infinite ease-in-out;
-
+  animation: waveGlow 2s infinite ease-in-out;
 }
 
-@keyframes waveGlow{
+@keyframes waveGlow {
+  0% {
+    filter: brightness(0.95);
+  }
 
-0%{
+  50% {
+    filter: brightness(1.15);
+  }
 
-filter:brightness(.95);
-
+  100% {
+    filter: brightness(0.95);
+  }
 }
-
-50%{
-
-filter:brightness(1.15);
-
-}
-
-100%{
-
-filter:brightness(.95);
-
-}
-
-}
-
 
 /*=========================================================
 RECORDING MODE
 =========================================================*/
 
-.recording-wave{
+.recording-wave {
+  border: 2px solid #e74c3c;
 
-border:2px solid #E74C3C;
-
-box-shadow:
-
-0 0 18px rgba(231,76,60,.35);
-
+  box-shadow: 0 0 18px rgba(231, 76, 60, 0.35);
 }
 
-.recording-wave::after{
+.recording-wave::after {
+  content: "REC";
 
-content:"REC";
+  position: absolute;
 
-position:absolute;
+  top: 10px;
 
-top:10px;
+  right: 12px;
 
-right:12px;
+  padding: 4px 10px;
 
-padding:4px 10px;
+  background: #e74c3c;
 
-background:#E74C3C;
+  color: #fff;
 
-color:#FFF;
+  border-radius: 20px;
 
-border-radius:20px;
+  font-size: 11px;
 
-font-size:11px;
+  font-weight: 700;
 
-font-weight:700;
-
-animation:recordBlink 1s infinite;
-
+  animation: recordBlink 1s infinite;
 }
 
-@keyframes recordBlink{
+@keyframes recordBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
 
-0%,100%{
-
-opacity:1;
-
+  50% {
+    opacity: 0.4;
+  }
 }
-
-50%{
-
-opacity:.4;
-
-}
-
-}
-
 
 /*=========================================================
 DRAG & DROP
 =========================================================*/
 
-.wave-drop-zone{
+.wave-drop-zone {
+  border: 2px dashed #4f7cff;
 
-border:2px dashed #4F7CFF;
+  border-radius: 16px;
 
-border-radius:16px;
-
-transition:.25s;
-
+  transition: 0.25s;
 }
 
-.wave-drop-zone.dragover{
+.wave-drop-zone.dragover {
+  border-color: #00d9ff;
 
-border-color:#00D9FF;
+  background: rgba(0, 217, 255, 0.1);
 
-background:rgba(0,217,255,.10);
-
-transform:scale(.99);
-
+  transform: scale(0.99);
 }
-
 
 /*=========================================================
 TOOLTIPS
 =========================================================*/
 
-.wave-tooltip{
+.wave-tooltip {
+  position: absolute;
 
-position:absolute;
+  padding: 6px 10px;
 
-padding:6px 10px;
+  background: #1a1f2a;
 
-background:#1A1F2A;
+  border: 1px solid #2d3444;
 
-border:1px solid #2D3444;
+  border-radius: 8px;
 
-border-radius:8px;
+  font-size: 11px;
 
-font-size:11px;
+  color: #fff;
 
-color:#FFF;
+  pointer-events: none;
 
-pointer-events:none;
+  opacity: 0;
 
-opacity:0;
+  transition: 0.2s;
 
-transition:.2s;
-
-z-index:100;
-
+  z-index: 100;
 }
 
-.wave-tooltip.active{
-
-opacity:1;
-
+.wave-tooltip.active {
+  opacity: 1;
 }
-
 
 /*=========================================================
 STATUS BADGES
 =========================================================*/
 
-.wave-badge{
+.wave-badge {
+  display: inline-flex;
 
-display:inline-flex;
+  align-items: center;
 
-align-items:center;
+  gap: 6px;
 
-gap:6px;
+  padding: 5px 12px;
 
-padding:5px 12px;
+  border-radius: 20px;
 
-border-radius:20px;
+  font-size: 11px;
 
-font-size:11px;
+  font-weight: 600;
 
-font-weight:600;
+  background: #4f7cff;
 
-background:#4F7CFF;
-
-color:#FFF;
-
+  color: #fff;
 }
 
-.wave-badge.record{
-
-background:#E74C3C;
-
+.wave-badge.record {
+  background: #e74c3c;
 }
 
-.wave-badge.live{
-
-background:#14C38E;
-
+.wave-badge.live {
+  background: #14c38e;
 }
-
 
 /*=========================================================
 RESPONSIVE
 =========================================================*/
 
-@media(max-width:1200px){
-
-#waveformContainer,
-
-#spectrumContainer,
-
-#spectrogramContainer{
-
-height:220px;
-
+@media (max-width: 1200px) {
+  #waveformContainer,
+  #spectrumContainer,
+  #spectrogramContainer {
+    height: 220px;
+  }
 }
 
+@media (max-width: 900px) {
+  .multi-channel {
+    gap: 12px;
+  }
+
+  .channel-wave {
+    height: 100px;
+  }
+
+  .frequency-scale {
+    font-size: 10px;
+  }
 }
 
-@media(max-width:900px){
+@media (max-width: 600px) {
+  #waveformContainer,
+  #spectrumContainer,
+  #oscilloscopeContainer,
+  #spectrogramContainer {
+    height: 180px;
+  }
 
-.multi-channel{
+  .wave-ruler {
+    height: 24px;
+  }
 
-gap:12px;
-
+  .wave-ruler span {
+    font-size: 10px;
+  }
 }
-
-.channel-wave{
-
-height:100px;
-
-}
-
-.frequency-scale{
-
-font-size:10px;
-
-}
-
-}
-
-@media(max-width:600px){
-
-#waveformContainer,
-
-#spectrumContainer,
-
-#oscilloscopeContainer,
-
-#spectrogramContainer{
-
-height:180px;
-
-}
-
-.wave-ruler{
-
-height:24px;
-
-}
-
-.wave-ruler span{
-
-font-size:10px;
-
-}
-
-}
-
 
 /*=========================================================
 ACCESSIBILITY
 =========================================================*/
 
 .wave-selection:focus,
-
 .wave-handle:focus,
+.wave-marker:focus {
+  outline: 2px solid #00d9ff;
 
-.wave-marker:focus{
-
-outline:2px solid #00D9FF;
-
-outline-offset:2px;
-
+  outline-offset: 2px;
 }
-
 
 /*=========================================================
 PERFORMANCE
@@ -1748,40 +1391,23 @@ PERFORMANCE
 #oscilloscopeCanvas,
 #spectrogramCanvas,
 .live-wave,
-.wave-playhead{
+.wave-playhead {
+  transform: translateZ(0);
 
-transform:translateZ(0);
+  backface-visibility: hidden;
 
-backface-visibility:hidden;
-
-will-change:
-
-transform,
-
-opacity,
-
-left,
-
-width;
-
+  will-change: transform, opacity, left, width;
 }
-
 
 /*=========================================================
 PRINT
 =========================================================*/
 
-@media print{
-
-#waveformContainer,
-#spectrumContainer,
-#oscilloscopeContainer,
-#spectrogramContainer{
-
-display:none;
-
+@media print {
+  #waveformContainer,
+  #spectrumContainer,
+  #oscilloscopeContainer,
+  #spectrogramContainer {
+    display: none;
+  }
 }
-
-}
-
-
