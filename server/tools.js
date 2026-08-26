@@ -190,7 +190,7 @@ tools.push({
 
 tools.push({
   id: "cut-audio",
-  name: "Cut MP3 / Audio",
+  name: "Trim Audio",
   group: "Audio",
   icon: "icons/cut audio.png",
   description: "Extract a segment (start to end) from an audio file.",
@@ -618,13 +618,13 @@ tools.push({
 });
 
 // ============================================================
-// EDITING (mirror of the MediaNest editor tools)
+// EDITING TOOLS (grouped under VIDEO — same media type)
 // ============================================================
 
 tools.push({
   id: "video-convert",
   name: "Convert Video Format",
-  group: "Editing",
+  group: "Video",
   icon: "icons/convert video format.png",
   description: "Transcode a video to MP4, WebM or MOV without bloating the file.",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
@@ -679,7 +679,7 @@ tools.push({
 tools.push({
   id: "video-crop",
   name: "Crop Video",
-  group: "Editing",
+  group: "Video",
   icon: "icons/crop video.png",
   description: "Crop a region out of a video.",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
@@ -703,7 +703,7 @@ tools.push({
 tools.push({
   id: "video-resize",
   name: "Resize Video",
-  group: "Editing",
+  group: "Video",
   icon: "icons/resize video.png",
   description: "Scale a video to new dimensions (keeps aspect ratio).",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
@@ -723,7 +723,7 @@ tools.push({
 tools.push({
   id: "video-rotate",
   name: "Rotate Video",
-  group: "Editing",
+  group: "Video",
   icon: "icons/rotate video.png",
   description: "Rotate a video 90, 180 or 270 degrees.",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
@@ -743,7 +743,7 @@ tools.push({
 tools.push({
   id: "video-trim",
   name: "Trim Video",
-  group: "Editing",
+  group: "Video",
   icon: "icons/trim video.png",
   description: "Cut a start to end segment from a video.",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
@@ -769,7 +769,7 @@ tools.push({
 tools.push({
   id: "video-merge",
   name: "Merge Videos",
-  group: "Editing",
+  group: "Video",
   icon: "icons/merge video.png",
   description: "Concatenate multiple videos into a single file.",
   inputs: [{ name: "video", label: "Video files (in order)", accept: "video/*", multiple: true }],
@@ -795,7 +795,7 @@ tools.push({
 tools.push({
   id: "replace-audio",
   name: "Replace Audio in Video",
-  group: "Editing",
+  group: "Video",
   icon: "icons/replace audio in video.png",
   description: "Swap the audio track of a video with a new audio file.",
   inputs: [
