@@ -2,7 +2,7 @@
 
 class StorageManager {
   constructor() {
-    this.storageKey = "sonicstudio-projects";
+    this.storageKey = "medianest-projects";
   }
 
   save(projectKey, data) {
