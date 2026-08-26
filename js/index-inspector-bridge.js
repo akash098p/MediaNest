@@ -46,6 +46,6 @@
   if (document.readyState === "loading")
     document.addEventListener("DOMContentLoaded", start, { once: true });
   else start();
-  window.addEventListener("sonicstudio:clip-selected", mount);
+  window.addEventListener("medianest:clip-selected", mount);
   setInterval(mount, 500);
 })();
