@@ -151,43 +151,87 @@ async function renderTool() {
 /* ------------------------------------------------------------------ */
 /* Home page                                                          */
 /* ------------------------------------------------------------------ */
-async function renderIndex() {
-  const container = $("#toolIndex");
-  if (!container) return;
-  try {
-    const tools = await fetchTools();
-    const groups = {};
-    for (const t of tools) (groups[t.group] = groups[t.group] || []).push(t);
+// Tools pinned to the top of each category card (in listed order);
+// unpinned tools keep their server order afterwards.
+const PINNED_TOOLS = {
+  Audio: [
+    "convert-audio",       // Audio Converter
+    "compress-audio",      // Audio Compressor
+    "increase-volume",     // Increase / Decrease Volume
+    "add-image-to-audio",  // Add Cover Art / MP4
+    "audio-transition",    // Audio Transition (Fade)
+  ],
+  Video: [
+    "video-compress",          // Video Compressor
+    "extract-audio",           // Extract Audio from Video
+    "remove-audio-from-video", // Remove Sound from Video
+    "replace-audio",           // Replace Audio in Video
+    "video-convert",           // Convert Video Format
+    "video-trim",              // Trim Video
+    "video-merge",             // Merge Videos
+  ],
+};
 
-    const frag = document.createDocumentFragment();
-    for (const [group, list] of Object.entries(groups)) {
-      frag.appendChild(el("h2", { class: "group-title", text: group }));
-      const grid = el("div", { class: "grid" });
-      for (const t of list) {
-        grid.appendChild(
-          el("a", {
-            class: "card",
-            href: `tool.html?id=${encodeURIComponent(t.id)}`,
-            style: "text-decoration:none;color:inherit",
-          }, [
-                        el("div", { class: "icon", html: `<img src="../${t.icon}" alt="${t.name}">` }),
-            el("h3", { text: t.name }),
-            el("p", { text: t.description || "" }),
-            el("span", { class: "go", text: "Use tool →" }),
-          ]),
-        );
-      }
-      frag.appendChild(grid);
-    }
-    container.replaceChildren(frag);
+/** Stable sort: pinned ids first (PINNED_TOOLS order), the rest keep server order. */
+function orderGroup(list, group) {
+  const first = PINNED_TOOLS[group];
+  if (!first || !first.length) return list;
+  const rank = new Map(first.map((id, i) => [id, i]));
+  return [...list].sort(
+    (a, b) =>
+      (rank.has(a.id) ? rank.get(a.id) : first.length) -
+      (rank.has(b.id) ? rank.get(b.id) : first.length),
+  );
+}
+
+async function renderIndex() {
+  const lists = document.querySelectorAll(".tool-list[data-group]");
+  if (!lists.length) return;
+
+  let tools;
+  try {
+    tools = await fetchTools();
   } catch (err) {
-    container.replaceChildren(
-      el("p", { class: "status-line err", text: `⚠ ${err.message}` }),
-      el("p", {
-        class: "small",
-        html:
-          "Start the backend first:<br><code>cd server &amp;&amp; npm install &amp;&amp; node server.js</code><br>then open <code>http://localhost:4000/tools/index.html</code>",
-      }),
+    for (const ul of lists) {
+      ul.replaceChildren(el("li", { class: "none", text: "Could not load." }));
+    }
+    const note = $("#serverNote");
+    if (note) {
+      note.hidden = false;
+      note.innerHTML =
+        "\u26A0 Could not reach the local server. Start it with <code>cd server && node server.js</code>";
+    }
+    return;
+  }
+
+  const byGroup = {};
+  for (const t of tools) (byGroup[t.group] = byGroup[t.group] || []).push(t);
+
+  for (const ul of lists) {
+    const group = ul.dataset.group;
+    const list = orderGroup(byGroup[group] || [], group);
+
+    const head = ul.closest(".category-card");
+    const h3 = head ? head.querySelector("h3") : null;
+    if (h3 && !h3.querySelector(".count-pill")) {
+      h3.appendChild(el("span", { class: "count-pill", text: `${list.length} tools` }));
+    }
+
+    if (!list.length) {
+      ul.replaceChildren(el("li", { class: "none", text: "No tools available yet." }));
+      continue;
+    }
+
+    ul.replaceChildren(
+      ...list.map((t) =>
+        el("li", {}, [
+          el("a", {
+            href: `tool.html?id=${encodeURIComponent(t.id)}`,
+            title: t.description || t.name,
+            text: t.name,
+          }),
+        ]),
+      ),
     );
   }
 }
@@ -195,6 +239,7 @@ async function renderIndex() {
 /* ------------------------------------------------------------------ */
 /* Status / progress / result                                         */
 /* ------------------------------------------------------------------ */
+
 function setBusy(busy) {
   const btn = $("#runBtn");
   if (btn) {
@@ -314,7 +359,7 @@ async function submitForm(ev) {
 /* Boot                                                               */
 /* ------------------------------------------------------------------ */
 document.addEventListener("DOMContentLoaded", () => {
-  if ($("#toolIndex")) {
+  if ($("#categoryGrid")) {
     renderIndex();
   } else if ($("#toolForm")) {
     renderTool();
