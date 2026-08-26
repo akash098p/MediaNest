@@ -1,0 +1,15 @@
+{
+  "name": "medianest-tools-server",
+  "version": "1.0.0",
+  "description": "FFmpeg-powered backend for the MediaNest media tools suite",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.0.1",
+    "pdf-lib": "^1.17.1"
+  }
+}
