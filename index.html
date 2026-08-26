@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SonicStudio</title>
+<title>MediaNest</title>
 
 <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/editor.css">
@@ -188,7 +188,7 @@
 <body>
 
 <div id="loadingScreen">
-  <div class="logo">SonicStudio</div>
+    <div class="logo">MediaNest</div>
   <div class="loader"></div>
   <p>Loading Professional Studio...</p>
 </div>
@@ -198,7 +198,7 @@
 <header id="topRibbon">
 
 <div class="brand">
-<h1>SonicStudio</h1>
+<h1>MediaNest</h1>
 <p>Professional Browser Audio & Video Editor</p>
 </div>
 
@@ -209,6 +209,7 @@
 <button id="saveAs">Save As</button>
 <button id="exportProject">Export</button>
 <button id="settings">Settings</button>
+<a href="tools/index.html" title="Standalone media tools (convert, compress, merge…)"><button type="button" id="toolsLauncher">Tools</button></a>
 </nav>
 
 </header>
@@ -602,7 +603,7 @@
 
 <div id="aboutDialog" class="modal hidden">
 <div class="modal-content">
-<h2>About SonicStudio</h2>
+<h2>About MediaNest</h2>
 <p>Professional browser-based audio and video editor.</p>
 <p>Version 1.0.0</p>
 <button id="closeAboutDialog">Close</button>
@@ -634,6 +635,80 @@
 <div class="timeline-marker"></div>
 </template>
 
+<div id="videoProcessDialog" class="modal hidden">
+<div class="modal-content">
+<h2 id="vpTitle">Process Video</h2>
+<div class="vp-body" id="vpBody">
+
+<div class="vp-group" data-vp="merge">
+<label>Select 2 or more videos to merge (in order)</label>
+<input type="file" id="vpMergeFiles" accept="video/*" multiple>
+<small class="vp-hint">Videos are concatenated in selection order. Audio is carried through where supported.</small>
+</div>
+
+<div class="vp-group" data-vp="replace">
+<label>Replacement audio file</label>
+<input type="file" id="vpReplaceAudio" accept="audio/*">
+<small class="vp-hint">The selected clip's audio will be replaced with this track.</small>
+</div>
+
+<div class="vp-group" data-vp="convert">
+<label>Output format</label>
+<select id="vpFormat">
+<option value="webm">WebM (VP9/Opus)</option>
+<option value="ogg">OGG (Theora/Vorbis)</option>
+<option value="mp4">MP4 (H.264 — when supported)</option>
+</select>
+</div>
+
+<div class="vp-group" data-vp="resize">
+<label>Width (px)</label>
+<input type="number" id="vpWidth" min="16" step="2">
+<label>Height (px)</label>
+<input type="number" id="vpHeight" min="16" step="2">
+</div>
+
+<div class="vp-group" data-vp="compress">
+<label>Compression level</label>
+<select id="vpCompressLevel">
+<option value="low">Low — higher quality, larger file</option>
+<option value="medium" selected>Medium — balanced</option>
+<option value="high">High — smallest file</option>
+</select>
+</div>
+
+<div class="vp-group" data-vp="crop">
+<label>Left (px)</label>
+<input type="number" id="vpCropX" value="0" min="0">
+<label>Top (px)</label>
+<input type="number" id="vpCropY" value="0" min="0">
+<label>Crop Width (px)</label>
+<input type="number" id="vpCropW" min="16">
+<label>Crop Height (px)</label>
+<input type="number" id="vpCropH" min="16">
+<small class="vp-hint">Leave width/height empty to keep the remaining full frame from the left/top offset.</small>
+</div>
+
+<div class="vp-group" data-vp="remove">
+<p class="vp-hint">This will produce a new video file with the audio track removed. Click Process to continue.</p>
+</div>
+
+<div class="vp-group" data-vp="rotate">
+<p class="vp-hint">Rotate the selected clip clockwise by 90°. Click Process to continue.</p>
+</div>
+
+</div>
+
+<progress id="vpProgress" value="0" max="100"></progress>
+<div id="vpStatus"></div>
+
+<div class="dialogButtons">
+<button id="vpStartBtn">Process</button>
+<button id="vpCancelBtn">Cancel</button>
+</div>
+</div>
+</div>
+
 </div>
 </div>
 
@@ -647,6 +722,7 @@
 <script src="js/recorder.js"></script>
 <script src="js/ffmpeg.js"></script>
 <script src="js/export.js"></script>
+<script src="js/video-processing.js"></script>
 <script src="js/theme.js"></script>
 <script src="js/shortcuts.js"></script>
 <script src="js/project.js"></script>
