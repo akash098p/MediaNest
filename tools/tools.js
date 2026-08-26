@@ -131,7 +131,7 @@ async function renderTool() {
 
   document.title = `${toolMeta.name} — MediaNest Tools`;
   head.replaceChildren(
-    el("div", { class: "icon", text: toolMeta.icon || "🎛️" }),
+        el("div", { class: "icon", html: `<img src="../${toolMeta.icon}" alt="${toolMeta.name}">` }),
     el("h1", { text: toolMeta.name }),
     el("p", { text: toolMeta.description || "" }),
     el("span", {
@@ -170,7 +170,7 @@ async function renderIndex() {
             href: `tool.html?id=${encodeURIComponent(t.id)}`,
             style: "text-decoration:none;color:inherit",
           }, [
-            el("span", { class: "icon", text: t.icon || "🎛️" }),
+                        el("div", { class: "icon", html: `<img src="../${t.icon}" alt="${t.name}">` }),
             el("h3", { text: t.name }),
             el("p", { text: t.description || "" }),
             el("span", { class: "go", text: "Use tool →" }),
