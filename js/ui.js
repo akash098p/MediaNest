@@ -367,37 +367,36 @@ class UIManager {
       ?.addEventListener("click", () => window.EditorManager?.trim?.());
     document
       .getElementById("rotateVideoBtn")
-      ?.addEventListener("click", () =>
-        this.adjustSelectedClip("rotation", 90),
-      );
+      ?.addEventListener("click", () => this.openVideoProcess("rotate"));
     document
       .getElementById("resizeVideoBtn")
-      ?.addEventListener("click", () =>
-        this.showWorkspace("appearanceWorkspace"),
-      );
+      ?.addEventListener("click", () => this.openVideoProcess("resize"));
     document
       .getElementById("removeAudioBtn")
-      ?.addEventListener("click", () =>
-        this.adjustSelectedClip("removeAudio", true),
-      );
+      ?.addEventListener("click", () => this.openVideoProcess("remove"));
     document
       .getElementById("cropVideoBtn")
-      ?.addEventListener("click", () =>
-        this.notify(
-          "Use Position, Scale, and Aspect ratio in the Inspector to crop the selected clip",
-        ),
-      );
+      ?.addEventListener("click", () => this.openVideoProcess("crop"));
     document
       .getElementById("mergeVideoBtn")
-      ?.addEventListener("click", () => window.EditorManager?.join?.());
+      ?.addEventListener("click", () => this.openVideoProcess("merge"));
     document
       .getElementById("compressVideoBtn")
-      ?.addEventListener("click", () =>
-        this.notify("Compression is applied during Export"),
-      );
+      ?.addEventListener("click", () => this.openVideoProcess("compress"));
     document
       .getElementById("convertVideoBtn")
-      ?.addEventListener("click", () => this.showModal("exportDialog"));
+      ?.addEventListener("click", () => this.openVideoProcess("convert"));
+    document
+      .getElementById("replaceAudioBtn")
+      ?.addEventListener("click", () => this.openVideoProcess("replace"));
+
+    // Video processing dialog buttons
+    document
+      .getElementById("vpStartBtn")
+      ?.addEventListener("click", () => this.startVideoProcess());
+    document
+      .getElementById("vpCancelBtn")
+      ?.addEventListener("click", () => this.cancelVideoProcess());
 
     // Project workspace buttons
     document
@@ -419,7 +418,7 @@ class UIManager {
   loadProjectFromFile() {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".sonc"; // SonicStudio project format
+    input.accept = ".mnst"; // MediaNest project format
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -560,6 +559,129 @@ class UIManager {
     if (modal) {
       modal.classList.remove("active");
     }
+  }
+
+  openVideoProcess(mode) {
+    const manager = window.VideoProcessingManager;
+    const titles = {
+      crop: "Crop Video",
+      resize: "Resize Video",
+      rotate: "Rotate Video",
+      merge: "Merge Videos",
+      compress: "Compress Video",
+      convert: "Convert Format",
+      remove: "Remove Audio",
+      replace: "Replace Audio",
+    };
+    const title = document.getElementById("vpTitle");
+    if (title) title.textContent = titles[mode] || "Process Video";
+
+    // Show only the group relevant to the chosen mode.
+    const groups = document.querySelectorAll(".vp-group");
+    groups.forEach((g) =>
+      g.classList.toggle("active", g.dataset.vp === mode),
+    );
+
+    // Reset status/progress and re-enable the Process button.
+    const status = document.getElementById("vpStatus");
+    if (status) status.textContent = "";
+    const bar = document.getElementById("vpProgress");
+    if (bar) bar.value = 0;
+    const start = document.getElementById("vpStartBtn");
+    if (start) {
+      start.disabled = false;
+      start.textContent = "Process";
+    }
+
+    this.vpMode = mode;
+
+    // Prefill the source dimensions for crop/resize if a clip is loaded.
+    if (mode === "crop" || mode === "resize") {
+      const src = manager?.getCurrentSource?.();
+      if (src) {
+        manager
+          .probe(src.src)
+          .then((p) => {
+            const w = document.getElementById("vpCropW");
+            const h = document.getElementById("vpCropH");
+            const rw = document.getElementById("vpWidth");
+            const rh = document.getElementById("vpHeight");
+            if (w) w.placeholder = String(Math.round(p.width));
+            if (h) h.placeholder = String(Math.round(p.height));
+            if (rw) rw.placeholder = String(Math.round(p.width));
+            if (rh) rh.placeholder = String(Math.round(p.height));
+          })
+          .catch(() => {});
+      }
+    }
+
+    this.showModal("videoProcessDialog");
+  }
+
+  startVideoProcess() {
+    const manager = window.VideoProcessingManager;
+    if (!manager) return this.notify("Video processing is unavailable.");
+
+    switch (this.vpMode) {
+      case "crop": {
+        const left = document.getElementById("vpCropX")?.value || 0;
+        const top = document.getElementById("vpCropY")?.value || 0;
+        const width = document.getElementById("vpCropW")?.value || "";
+        const height = document.getElementById("vpCropH")?.value || "";
+        manager.cropClip({
+          left,
+          top,
+          width: width === "" ? 0 : width,
+          height: height === "" ? 0 : height,
+        });
+        break;
+      }
+      case "resize": {
+        const width = document.getElementById("vpWidth")?.value || "";
+        const height = document.getElementById("vpHeight")?.value || "";
+        manager.resizeClip({
+          width: width === "" ? 0 : width,
+          height: height === "" ? 0 : height,
+        });
+        break;
+      }
+      case "rotate":
+        manager.rotateClip(90);
+        break;
+      case "compress": {
+        const level =
+          document.getElementById("vpCompressLevel")?.value || "medium";
+        manager.compressClip(level);
+        break;
+      }
+      case "convert": {
+        const format = document.getElementById("vpFormat")?.value || "webm";
+        manager.convertClip(format);
+        break;
+      }
+      case "remove":
+        manager.removeAudioClip();
+        break;
+      case "merge": {
+        const files = document.getElementById("vpMergeFiles")?.files;
+        manager.mergeClips(files);
+        break;
+      }
+      case "replace": {
+        const file = document.getElementById("vpReplaceAudio")?.files?.[0];
+        manager.replaceAudioClip(file);
+        break;
+      }
+      default:
+        this.notify("No operation selected.");
+    }
+  }
+
+  cancelVideoProcess() {
+    window.VideoProcessingManager?.cancel?.();
+    const status = document.getElementById("vpStatus");
+    if (status) status.textContent = "";
+    this.hideModal("videoProcessDialog");
   }
 
   handleFileSelect(event) {
@@ -809,7 +931,7 @@ class UIManager {
     this.notify(`Theme changed to ${theme}`);
 
     // Save theme preference
-    localStorage.setItem("sonicstudio_theme", theme);
+    localStorage.setItem("medianest_theme", theme);
 
     // Update timeline colors
     if (window.EffectsManager?.updateTheme) {
