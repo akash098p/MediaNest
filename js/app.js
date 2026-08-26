@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * SonicStudio - Premium Browser-Based Editor
+ * MediaNest - Premium Browser-Based Editor
  * Main Application Controller
  */
 
@@ -14,7 +14,7 @@ class App {
 
   async initialize() {
     try {
-      console.log("🎬 Initializing SonicStudio...");
+      console.log("🎬 Initializing MediaNest...");
       this.showLoading("Starting up...");
       await this.loadInspectorScript();
       await this.initManagers();
@@ -25,8 +25,8 @@ class App {
       // project's clips/media into the library and timeline).
       this.isInitialized = true;
       this.hideLoading();
-      this.notify("🎉 Welcome to SonicStudio!", "success");
-      console.log("✅ SonicStudio initialized successfully");
+      this.notify("🎉 Welcome to MediaNest!", "success");
+      console.log("✅ MediaNest initialized successfully");
     } catch (error) {
       console.error("❌ Failed to initialize:", error);
       this.hideLoading();
@@ -102,7 +102,7 @@ class App {
   }
 
   loadTheme() {
-    const savedTheme = localStorage.getItem("sonicstudio_theme") || "Dark";
+    const savedTheme = localStorage.getItem("medianest_theme") || "Dark";
     document.body.setAttribute("data-theme", savedTheme.toLowerCase());
     const themeSelector = document.getElementById("themeSelector");
     if (themeSelector) themeSelector.value = savedTheme;
