@@ -4,29 +4,67 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MediaNest — Media Tools</title>
-<link rel="icon" href="../icons/favicon.ico">
+<link rel="icon" href="../icons/icon.png">
 <link rel="stylesheet" href="tools.css">
 </head>
 <body>
 
 <header class="topbar">
   <a class="brand" href="index.html" style="text-decoration:none;color:inherit">
-    <span class="logo">🎛️</span>
+    <span class="logo"><img src="../icons/icon.png" alt="MediaNest" /></span>
     <span>MediaNest <em style="font-style:normal;color:var(--accent)">Tools</em></span>
-  </a>
+    </a>
   <div class="spacer"></div>
   <nav>
-    <a href="../index.html">🎬 Open Editor</a>
+        <a href="../index.html" class="editor-link" title="Open the full MediaNest video/audio editor">
+      <img src="../icons/editor.png" alt="Editor" class="editor-icon" />
+      <span class="editor-label">Open MediaNest Editor</span>
+    </a>
   </nav>
 </header>
 
-<section class="hero">
-  <h1>Media Tools</h1>
-  <p>Convert, mix, compress, merge and repair audio, video and GIF files — powered by FFmpeg running on your own machine.</p>
-</section>
+<main class="wrap">
+  <section class="intro-section">
+    <div class="website-desc">
+      <h2>About MediaNest Tools</h2>
+      <p>
+        MediaNest Tools is a collection of fast, single-purpose utilities for manipulating audio, video, and GIF files.
+        Every tool runs <b>locally on your own machine</b> through a lightweight Node.js + FFmpeg backend — your files
+        never leave the computer and nothing is uploaded to a server.
+      </p>
+    </div>
 
-<main class="wrap" id="toolIndex">
-  <p style="color:var(--muted)" id="loadingMsg">Loading tools…</p>
+    <div class="category-grid" id="categoryGrid">
+      <div class="category-card">
+        <div class="card-head">
+          <img src="../icons/audio group.png" alt="Audio" class="cat-icon" />
+          <h3>Audio Tools</h3>
+        </div>
+        <p>Convert between MP3, WAV, OGG, FLAC, M4A and more. Compress to shrink file sizes, trim and cut segments, merge or mix tracks, remove background noise and silence, change playback speed without pitch shift, and attach album cover art.</p>
+        <ul class="tool-list" data-group="Audio"><li class="loading">Loading tools…</li></ul>
+      </div>
+
+      <div class="category-card">
+        <div class="card-head">
+          <img src="../icons/video group.png" alt="Video" class="cat-icon" />
+          <h3>Video Tools</h3>
+        </div>
+        <p>Compress videos to a fraction of the original bitrate, extract or strip the audio track, and make quick edits — convert format, crop, resize, rotate, trim, merge clips and swap the soundtrack.</p>
+        <ul class="tool-list" data-group="Video"><li class="loading">Loading tools…</li></ul>
+      </div>
+
+      <div class="category-card">
+        <div class="card-head">
+          <img src="../icons/gif group.png" alt="GIF" class="cat-icon" />
+          <h3>GIF Tools</h3>
+        </div>
+        <p>Shrink animated GIFs by scaling them down and lowering the frame rate. Convert any video clip into an optimized animated GIF using FFmpeg's palette generation for crisp, colorful results every time.</p>
+        <ul class="tool-list" data-group="GIF"><li class="loading">Loading tools…</li></ul>
+      </div>
+    </div>
+
+    <p class="small" id="serverNote" hidden></p>
+  </section>
 </main>
 
 <footer>
