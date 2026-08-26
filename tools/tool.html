@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediaNest — Tool</title>
+<link rel="icon" href="../icons/favicon.ico">
+<link rel="stylesheet" href="tools.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="index.html" style="text-decoration:none;color:inherit">
+    <span class="logo">🎛️</span>
+    <span>MediaNest <em style="font-style:normal;color:var(--accent)">Tools</em></span>
+  </a>
+  <div class="spacer"></div>
+  <nav>
+    <a href="index.html">⬅ All tools</a>
+    <a href="../index.html">🎬 Editor</a>
+  </nav>
+</header>
+
+<div class="tool-layout">
+  <!-- LEFT: form -->
+  <div class="panel-card">
+    <div class="tool-head" id="toolHead">
+      <p style="color:var(--muted)" id="toolLoading">Loading tool…</p>
+    </div>
+    <form class="tool-form" id="toolForm" hidden>
+      <div id="toolInputs"></div>
+      <div id="toolFields"></div>
+      <button type="submit" class="btn btn-primary" id="runBtn" style="width:100%;justify-content:center">⚡ Start</button>
+      <p class="small" id="toolHint"></p>
+    </form>
+  </div>
+
+  <!-- RIGHT: result -->
+  <div class="panel-card">
+    <div class="result-box">
+      <h2 style="margin:0 0 4px;">Result</h2>
+      <div class="drop" id="resultDrop">
+        <p style="margin:0 0 6px"><strong>Output appears here</strong></p>
+        <p style="margin:0;font-size:12.5px;opacity:0.8">Your files are processed <b>on this machine</b> — nothing is uploaded anywhere.</p>
+      </div>
+      <div class="progress" id="progressWrap" hidden><div id="progressBar"></div></div>
+      <div class="status-line" id="statusLine"></div>
+      <div id="resultMedia"></div>
+      <div class="result-actions" id="resultActions"></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p><strong>MediaNest Tools</strong> · Powered by FFmpeg via the local Node.js server</p>
+</footer>
+
+<script src="tools.js"></script>
+</body>
+</html>
