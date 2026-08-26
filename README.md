@@ -39,10 +39,9 @@ MediaNest is a powerful, audio and video editing application that brings profess
 A suite of individual, single-purpose tools with their own home page — powered by a
 Node.js + FFmpeg backend so heavy processing runs on your machine, not in a tab:
 
-- **Audio**: Converter · Add cover art / make MP4 · Fade transition · Change speed · Cut MP3 · Volume · Merge · Mix · Remove noise · Remove silence · Repair M4A
-- **Video**: Extract audio · Remove audio (silent video) · Video compressor
+- **Audio**: Converter · Add cover art / make MP4 · Fade transition · Change speed · Trim audio · Volume · Merge · Mix · Remove noise · Remove silence · Repair M4A
+- **Video**: Compressor · Extract audio · Remove sound · Convert format · Crop · Resize · Rotate · Trim · Merge videos · Replace audio
 - **GIF**: GIF compressor · Video → GIF
-- **Editing**: Convert format · Crop · Resize · Rotate · Trim · Merge videos · Replace audio
 
 See **[Tools Suite](#--tools-suite)** below for setup.
 
@@ -117,7 +116,7 @@ The result is previewed inline with a download button.
 | Audio | Add Cover Art / MP4 | Attach cover to MP3 or build an MP4 music video from audio + image |
 | Audio | Audio Transition | Fade-in / fade-out transitions |
 | Audio | Change Speed | Speed up / slow down without pitch change |
-| Audio | Cut MP3 | Extract a start → end segment |
+| Audio | Trim Audio | Extract a start → end segment |
 | Audio | Volume | Raise or lower loudness |
 | Audio | Merge Audio | Concatenate several tracks |
 | Audio | Mix Audio | Play several tracks at once |
