@@ -88,7 +88,7 @@ class ExportManager {
       const ext = (recorder.mimeType || mime).includes("audio")
         ? "webm"
         : "webm";
-      this.downloadBlob(blob, `SonicStudio-export-${Date.now()}.${ext}`);
+      this.downloadBlob(blob, `MediaNest-export-${Date.now()}.${ext}`);
       this.saveExportHistory(this.exportFormat, this.exportQuality);
       this.notify("Export completed successfully.");
     } catch (error) {
@@ -112,11 +112,11 @@ class ExportManager {
 
   saveExportHistory(format, quality) {
     const history = JSON.parse(
-      localStorage.getItem("sonicstudio-export-history") || "[]",
+      localStorage.getItem("medianest-export-history") || "[]",
     );
     history.push({ format, quality, timestamp: new Date().toISOString() });
     localStorage.setItem(
-      "sonicstudio-export-history",
+      "medianest-export-history",
       JSON.stringify(history.slice(-50)),
     );
   }
