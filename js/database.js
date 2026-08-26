@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * SonicStudio Database Manager
+ * MediaNest Database Manager
  * Browser-compatible persistent storage using localStorage and IndexedDB
  */
 
@@ -40,7 +40,7 @@ class DatabaseManager {
 
   openIndexedDB() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open("SonicStudioDB", 1);
+      const request = indexedDB.open("MediaNestDB", 1);
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
@@ -122,7 +122,7 @@ class DatabaseManager {
   _saveToStorage() {
     try {
       const storageData = JSON.stringify(this.data);
-      localStorage.setItem("sonicstudio_db", storageData);
+      localStorage.setItem("medianest_db", storageData);
     } catch (error) {
       console.error("Database save error:", error);
     }
@@ -130,7 +130,7 @@ class DatabaseManager {
 
   loadFromStorage() {
     try {
-      const storedData = localStorage.getItem("sonicstudio_db");
+      const storedData = localStorage.getItem("medianest_db");
       if (storedData) {
         this.data = JSON.parse(storedData);
       }
