@@ -141,7 +141,8 @@ a:hover { text-decoration: underline; }
 }
 .card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: var(--shadow); }
 .card:hover::before { opacity: 1; }
-.card .icon { font-size: 30px; }
+.card .icon { font-size: 30px; display: flex; align-items: center; justify-content: center; height: 56px; }
+.card .icon img { width: 40px; height: 40px; object-fit: contain; }
 .card h3 { margin: 4px 0 0; font-size: 16.5px; }
 .card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; flex: 1; }
 .card .go {
@@ -171,6 +172,7 @@ a:hover { text-decoration: underline; }
   padding: 22px;
 }
 .tool-head .icon { font-size: 38px; }
+.tool-head .icon img { width: 56px; height: 56px; object-fit: contain; }
 .tool-head h1 { margin: 10px 0 6px; font-size: 24px; }
 .tool-head p { color: var(--muted); margin: 0 0 6px; font-size: 13.5px; line-height: 1.55; }
 .tool-head .badge {
