@@ -1,4 +1,4 @@
-/* SonicStudio - Premium Browser-Based Editor Stylesheet */
+/* MediaNest - Premium Browser-Based Editor Stylesheet */
 
 /* Color Variables */
 :root {
@@ -1784,6 +1784,56 @@ body {
 .modal-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Video Processing Dialog */
+#videoProcessDialog .modal-content {
+  max-width: 480px;
+}
+.vp-body {
+  padding: 16px 20px 4px;
+}
+.vp-group {
+  display: none;
+  margin-bottom: 14px;
+}
+.vp-group.active {
+  display: block;
+}
+.vp-group label {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 13px;
+  color: var(--text-secondary, #aab);
+}
+.vp-group select,
+.vp-group input[type="number"],
+.vp-group input[type="file"] {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  background: var(--bg-header, #1b1b22);
+  color: var(--text-primary, #eee);
+}
+.vp-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary, #889);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+#videoProcessDialog progress {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 8px 20px 4px;
+}
+#vpStatus {
+  padding: 0 20px;
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--accent-blue, #4f7cff);
 }
 
 /* Timeline Playhead */
