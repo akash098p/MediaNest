@@ -1,187 +1,226 @@
-# MediaNest - Professional Browser-Based Audio & Video Editor
+# 🎬 MediaNest
 
-## 🎬 Welcome to MediaNest
+**A local-first audio/video studio + swiss-army toolbox that runs entirely on your own machine.**
 
-MediaNest is a powerful, audio and video editing application that brings professional-grade editing capabilities to the web platform.
+MediaNest ships as two apps served by one tiny Node.js server:
 
-## 🌟 Key Features
+| App | Entry | What it is |
+|---|---|---|
+| 🎞️ **MediaNest Editor** | `/index.html` | A browser-based timeline editor with recording, effects, live visualizers and project files |
+| 🧰 **MediaNest Tools** | `/tools/index.html` | A registry-driven portal of **27 one-purpose FFmpeg tools** for audio, video and GIF work |
 
-### 🎥 Video Editing Suite
-- **Clip Editing**: Trim, cut, splice, and arrange video clips on a multi-track timeline
-- **Visual Effects**: Apply filters, transitions, and color corrections
-- **Transformations**: Rotate, resize, and reposition video elements
-- **Multi-track Timeline**: Independent video and audio tracks for complex editing
+Everything runs locally through the bundled Node server — files never leave your computer, and both apps work fully offline once set up.
 
-### 🎧 Audio Editing Suite
-- **Multi-track Mixing**: Balance audio levels, pan channels, and apply effects
-- **Advanced Effects**: Bass Boost, Treble, Equalizer, Reverb, Echo, Noise Reduction
-- **Audio Processing**: Normalization, pitch shifting, playback speed control
+---
 
-### 📤 Export & Sharing
-- **Multiple Export Formats**: MP4, MP3, WAV, AAC, OGG, FLAC
-- **Quality Control**: Adjust bitrate, resolution, and compression settings
-- **Batch Export**: Export multiple projects at once
-- **Direct Sharing**: Generate shareable links for collaboration
+## ✨ Highlights
 
-### 🎥 Recording Capabilities
-- **Microphone Recording**: Capture high-quality audio directly in the browser
-- **System Audio Recording**: Record system audio output
-- **Screen Recording**: Capture video and audio from your desktop
-- **Instant Playback**: Immediate preview of recordings
+- 🔒 **100% local & private** — uploads are staged in your OS temp folder and deleted when the job finishes
+- ⚡ **Zero build step** — plain HTML/CSS/JS front-end, one Express back-end, no bundlers
+- 🎛️ **27 tools out of the box** — convert, compress, trim, merge, mix, clean up, resize, rotate, re-time, GIF-fy…
+- 🤖 **Smart quality defaults** — bitrates mirror the source file, so conversions never silently balloon in size
+- 🖼️ **Registry-driven UI** — every tool's form (inputs, dropdowns, limits) is generated from `server/tools.js`
+- 🎥 **Real editor** — multi-track timeline, clip ops, mic/system/screen recording, spectrum & waveform views
+- 🚀 **One-click launch** — `run-tools.bat` installs dependencies, boots the server and opens your browser
 
-### 🎨 User Interface
-- **Multiple Workspaces**: Switch between Editor, Effects, Recording, and Project views
-- **Customizable Themes**: Dark, Light, Midnight, and Neon themes
-- **Intuitive Interface**: Drag-and-drop media library with real-time feedback
-- **Keyboard Shortcuts**: Efficient workflow with spacebar play/pause and arrow keys for navigation
+---
 
-### 🧰 Standalone Media Tools (FFmpeg backend)
-A suite of individual, single-purpose tools with their own home page — powered by a
-Node.js + FFmpeg backend so heavy processing runs on your machine, not in a tab:
+## 🚀 Quick Start
 
-- **Audio**: Converter · Add cover art / make MP4 · Fade transition · Change speed · Trim audio · Volume · Merge · Mix · Remove noise · Remove silence · Repair M4A
-- **Video**: Compressor · Extract audio · Remove sound · Convert format · Crop · Resize · Rotate · Trim · Merge videos · Replace audio
-- **GIF**: GIF compressor · Video → GIF
+### Requirements
 
-See **[Tools Suite](#--tools-suite)** below for setup.
+| Need | Notes |
+|---|---|
+| [Node.js](https://nodejs.org) 18+ | Only runtime dependency (`express` + `multer` auto-install on first run) |
+| [FFmpeg](https://ffmpeg.org) | Must be on `PATH` (or point `FFMPEG_PATH` / `FFPROBE_PATH` at the binaries) |
 
-## 📂 Project Structure
+### Easiest way (Windows)
 
-```
-MediaNest/
-├── css/                # Professional styling with premium themes
-├── js/                 # Complete JavaScript implementation:
-│   ├── ui.js           # UI manager with workspace switching
-│   ├── player.js       # Video/audio player with playback controls
-│   ├── timeline.js     # Multi-track timeline management
-│   ├── storage.js      # Browser localStorage persistence
-│   ├── notifications.js# System notifications & alerts
-│   ├── loading.js      # Startup sequence manager
-│   ├── editor.js       # Editing operations & shortcuts
-│   ├── waveform.js     # Audio waveform visualization
-│   ├── recorder.js     # Recording functionality
-│   ├── export.js       # Export manager with format selection
-│   └── ffmpeg.js       # Media processing engine
-├── tools/              # 🆕 Standalone media tools UI (home page + per-tool pages)
-├── server/             # 🆕 Node.js + Express + FFmpeg backend for the tools
-│   ├── server.js       # API + static file server
-│   ├── tools.js        # Registry of all 24 tools (ffmpeg command builders)
-│   └── lib/ffmpeg.js   # ffmpeg/ffprobe runner helpers
-├── index.html          # Main application entry point with full UI
-└── README.md           # Documentation
-```
+Double-click **`run-tools.bat`**. It will:
 
-## 🚀 Getting Started
+1. Verify Node.js is installed
+2. Run `npm install` inside `server/` on first launch
+3. Start the server (skips startup if it already responds)
+4. Open the Tools Portal in your default browser
 
-1. **Open the Application**: Simply open `index.html` in your browser
-2. **Create New Project**: Click "New Project" to start fresh
-3. **Import Media**: Drag and drop files into the Media Library
-4. **Edit Your Project**: 
-   - Drag clips onto the timeline
-   - Trim and cut clips with precision
-   - Apply visual effects and audio effects
-   - Adjust volume, opacity, and transformations
-5. **Export Your Work**: Choose format and quality, then save
+### Manual way (any OS)
 
-## 🧰 Tools Suite (FFmpeg backend)
-
-The standalone tools run through a small Node.js backend that shells out to FFmpeg.
-This gives real, fast processing for jobs a browser cannot do well (MP3 encoding,
-M4A repair, noise removal, GIF palette optimization, etc.).
-
-### 1. Requirements
-- **Node.js 18+** (`node -v`)
-- **FFmpeg + ffprobe** on your PATH (`ffmpeg -version`)
-
-### 2. Start the backend
 ```bash
 cd server
-npm install        # express + multer
-node server.js     # http://localhost:4000
+npm install
+npm start            # serves on http://localhost:4000
 ```
 
-### 3. Open the tools
-- **Tools home page** → http://localhost:4000/tools/index.html
-- **Main editor** → http://localhost:4000/index.html
-  (the editor's top menu also has a **Tools** button linking there)
+Then visit:
 
-Pick any tool card, drop your file(s) in, adjust the options and press **Start**.
-The result is previewed inline with a download button.
+- Tools Portal → **http://localhost:4000/tools/index.html**
+- Main Editor → **http://localhost:4000/index.html**
 
-### 4. Available tools
+> 💡 Use a different port with `PORT=8080` (manual) or `set MEDIA_NEST_PORT=8080` before running `run-tools.bat`.
 
-| Group | Tool | What it does |
-|---|---|---|
-| Audio | Audio Converter | MP3 ⇄ WAV / OGG / FLAC / M4A / AAC / OPUS |
-| Audio | Add Cover Art / MP4 | Attach cover to MP3 or build an MP4 music video from audio + image |
-| Audio | Audio Transition | Fade-in / fade-out transitions |
-| Audio | Change Speed | Speed up / slow down without pitch change |
-| Audio | Trim Audio | Extract a start → end segment |
-| Audio | Volume | Raise or lower loudness |
-| Audio | Merge Audio | Concatenate several tracks |
-| Audio | Mix Audio | Play several tracks at once |
-| Audio | Remove Noise | FFT denoise (afftdn) |
-| Audio | Remove Silence | Trim silent gaps |
-| Audio | Audio Compressor | Shrink any audio — fraction of source bitrate, optional mono |
-| Audio | Repair M4A | Remux truncated/damaged files |
-| Video | Extract Audio | Save the video's soundtrack as MP3/WAV/… |
-| Video | Remove Sound | Silent video (audio track dropped) |
-| Video | Video Compressor | CRF-based size reduction (+ optional scale) |
-| GIF | GIF Compressor | Smaller GIFs via scale + fps |
-| GIF | Video → GIF | Palette-optimized animated GIF |
-| Editing | Convert Format | MP4 / WebM / MOV |
-| Editing | Crop / Resize / Rotate / Trim | Geometry edits |
-| Editing | Merge Videos / Replace Audio | Multi-input operations |
+---
 
-### 5. Configuration
-| Variable | Purpose |
+## 📁 Project Structure
+
+```
+Media-Nest/
+├── index.html            # Main editor application
+├── run-tools.bat         # One-click Windows launcher
+├── css/                  # Editor stylesheets
+├── js/                   # Editor front-end modules (timeline, recorder,
+│                         #   effects, exporter, storage, speech-bubble…)
+├── assets/ fonts/        # Static resources
+├── icons/                # Per-tool PNG icons
+├── libraries/ workers/   # Vendored libs & web workers
+├── tools/
+│   ├── index.html        # Tools Portal homepage (grouped tool cards)
+│   ├── tool.html         # Generic per-tool page (form built from the registry)
+│   └── tools.css         # Portal styling
+└── server/
+    ├── server.js         # Express app: static hosting + JSON API
+    ├── package.json      # express ^4, multer ^2 (no other deps!)
+    ├── lib/ffmpeg.js     # ffmpeg/ffprobe wrappers + media probing
+    └── tools.js          # ★ The 27-tool registry — edit me to add tools
+```
+
+## 🎞️ MediaNest Editor
+
+The main app (`index.html`) is a full multi-workspace editing environment:
+
+| Workspace | What you get |
 |---|---|
-| `PORT` | Server port (default `4000`) — `PORT=5000 node server.js` |
-| `FFMPEG_PATH` | Custom ffmpeg binary path if not on PATH |
-| `FFPROBE_PATH` | Custom ffprobe binary path if not on PATH |
+| **Editor** | Media library with drag-&-drop, zoomable multi-track timeline with clip **split / cut / copy / paste / duplicate / join / delete**, undo-redo history, timeline markers, per-track mute · lock · hide, clip inspector + audio mixer |
+| **Effects** | Audio effect sliders (bass boost, etc.) and quick video processing actions on the selected clip |
+| **Record** | Capture from **microphone**, **system audio**, or the **screen** straight into the project |
+| **Project** | Save / open project files so sessions survive reloads |
+| **Appearance** | Theme selector for the whole studio |
 
-## 💡 Advanced Features
+Also built in:
 
-- **Multi-track Editing**: Work with separate audio tracks simultaneously
-- **Live Preview**: Real-time playback with visual effects
-- **Project Autosave**: Automatic saving with version history
-- **Custom Themes**: Personalize the look and feel of the app
-- **Keyboard Shortcuts**: Efficient workflow with spacebar, arrow keys, and shortcuts
+- ▶️ Preview player with live **frequency spectrum** and **waveform** visualizers
+- 📤 Export dialog with format choice, plus advanced video processing pipeline
+- ⌨️ Keyboard shortcuts (e.g. `Space` = play/pause), plugin manager and notification system
+- 💾 Metadata database + local storage layer (`js/database.js`, `js/storage.js`)
 
-## 🛠️ Technical Implementation
+---
 
-### 🧩 Core Components
-- **UIManager**: Controls workspace visibility and user interactions
-- **PlayerManager**: Handles media playback, volume control, seek functionality
-- **TimelineManager**: Manages multi-track operations and clip positioning
-- **StorageManager**: Persists project data using browser localStorage
-- **App Controller**: Orchestrates initialization, main loop, and theme loading
+## 🧰 Tools Portal
 
-### 🌐 Remote Access (Mode 5)
-MediaNest supports remote access through a secure tunnel:
-1. Open AionUi from your computer
-2. Enable WebUI in Settings → WebUI → Turn it on
-3. Use the remote access feature to open AionUi from your phone or another device
-4. Share the generated access link with others
+The portal at `/tools/index.html` groups all tools into **Audio**, **Video** and **GIF**
+cards. Clicking a tool opens the same generic `tool.html` page, whose form is generated
+from that tool's registry entry. Pick your file(s), tweak the options, hit run — FFmpeg
+does the work server-side and the result appears in a preview panel with a download
+button.
 
-## 🛠️ Technical Requirements
+How jobs are handled:
 
-- **Browser**: Modern web browser (Chrome, Firefox, Edge, Safari)
-- **Internet Connection**: Required for initial setup and updates
-- **No Installation**: Runs entirely in the browser
-- **No Server**: Client-side only application
+1. Files are uploaded as `multipart/form-data` (up to **1 GB**) and staged in a temp folder
+2. `ffprobe` inspects the media so smart defaults can mirror source quality
+3. The tool's `build()` produces an ffmpeg argument list; output goes back inline
+4. Temp inputs and outputs are cleaned up automatically after every request
 
-## 🛠️ Support & Contribution
+## 🛠️ All 27 Tools
 
-For support, bug reports, and feature requests:
-- Visit the project's issue tracker on GitHub
-- Submit pull requests for improvements
-- Share your creations using #MediaNest
-- Join the community discussion on our forum
+### 🔊 Audio (12)
 
-## 📜 License
+| Tool | What it can do | Key options |
+|---|---|---|
+| **Audio Converter** | Convert between MP3, WAV, OGG, FLAC, M4A, AAC, OPUS and more | Output format; bitrate *Auto* (mirrors source) or 96–320 kbps |
+| **Add Cover Art / MP4** | Embed album art into an MP3, or combine audio + image into an MP4 "music video" | MP3-cover or MP4 mode; output width/height |
+| **Change Audio Speed** | Speed up or slow down audio **without changing pitch** | 0.25× – 4× speed |
+| **Trim Audio** | Extract a segment losslessly (stream copy) | Start & end in `mm:ss` or seconds |
+| **Increase / Decrease Volume** | Raise or lower loudness | Gain from −30 dB to +30 dB |
+| **Merge Audio (Concatenate)** | Join multiple files end-to-end into one track | Multi-select, plays in the chosen order |
+| **Mix Audio** | Overlay tracks so they play **at the same time** | Multi-select; longest input wins |
+| **Remove Noise** | Reduce background hiss/static via FFmpeg's `afftdn` filter | Noise reduction −40…−5 dB |
+| **Remove Silence** | Strip leading/trailing silence and long dead gaps | Threshold (dB) + minimum gap length |
+| **Audio Compressor** | Shrink file size to a fraction of the **source** bitrate — never bigger | light / balanced / strong / extreme · keep/auto format · mono downmix |
+| **Repair M4A** | Rebuild truncated or damaged M4A/MP4 audio by remuxing | — |
+| **Audio Transition (Fade)** | Smooth fade-in / fade-out transitions, auto-timed to track length | Fade-in & fade-out seconds |
 
-MediaNest is released under the MIT License - see `LICENSE` file for details.
+### 🎥 Video (10)
 
-## 📞 Support
+| Tool | What it can do | Key options |
+|---|---|---|
+| **Extract Audio from Video** | Save a video's soundtrack as its own audio file | mp3 / wav / aac / m4a / ogg / flac |
+| **Remove Sound from Video** | Delete the audio track — video stream is copied untouched | — |
+| **Video Compressor** | Targets a fraction of the source bitrate so the result is **always smaller** | Level; optional width scale; MP4 or WebM |
+| **Convert Video Format** | Transcode to MP4, WebM or MOV without bloating the file | Format; Auto quality matches source bitrate (or high/balanced/small) |
+| **Crop Video** | Cut a rectangular region out of any video | Width / height / X / Y in pixels |
+| **Resize Video** | Scale to new dimensions while keeping aspect ratio | Target W × H |
+| **Rotate Video** | Straighten sideways phone clips | 90° / 180° / 270° |
+| **Trim Video** | Keep only a start→end slice | Timestamps |
+| **Merge Videos** | Concatenate multiple clips into a single file | Multi-select order |
+| **Replace Audio in Video** | Swap a video's soundtrack with a new audio file | Replacement audio upload |
 
+### 🌈 GIF (5)
+
+| Tool | What it can do | Key options |
+|---|---|---|
+| **GIF Compressor** | Smaller GIFs via down-scaling + frame-rate reduction | Width (0 = keep); frame rate 1–30 fps |
+| **Video to GIF** | Optimized animated GIF from any clip using FFmpeg palette generation for crisp colors | Frame rate; scale width |
+| **GIF Resize & Crop** | Resize by width keeping aspect, or scale-to-cover then center-crop to exact dimensions | Mode resize/crop; width; height (0 = auto) |
+| **GIF to Video** | Turn an animated GIF into a shareable video | MP4 (+faststart) / WebM VP9 / MOV; odd sizes auto-aligned to even pixels |
+| **Create GIF from Images** | Build a slideshow GIF from a set of images shown in order | Seconds per image; fps; canvas W × H |
+
+## 🔌 REST API
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/api/tools` | Public list of every tool (id, name, group, icon, description, form fields) — this is what powers the portal cards and forms |
+| `GET` | `/api/health` | `{ ok }` plus which ffmpeg binary will be used |
+| `POST` | `/api/tools/:id` | Run a tool: multipart fields named after the tool's inputs + regular params; responds with the processed file |
+
+## ⚙️ Configuration
+
+| Environment variable | Default | Effect |
+|---|---|---|
+| `PORT` / `MEDIA_NEST_PORT` | `4000` | HTTP port (`run-tools.bat` reads `MEDIA_NEST_PORT`) |
+| `FFMPEG_PATH` | `ffmpeg` | Custom path to the ffmpeg binary |
+| `FFPROBE_PATH` | `ffprobe` | Custom path to the ffprobe binary |
+
+## ➕ Adding Your Own Tool
+
+The whole toolbox is data-driven — drop an entry into **`server/tools.js`** and it instantly
+appears on the portal with its own generated page:
+
+```js
+tools.push({
+  id: "my-tool",                    // used in the URL  → /tools/tool.html?id=my-tool
+  name: "My Tool",                  // shown on cards & pages
+  group: "Audio",                   // Audio | Video | GIF  (portal section)
+  icon: "icons/my tool.png",        // PNG in /icons
+  description: "One clear sentence.",
+  inputs: [{ name: "audio", label: "Audio file", accept: "audio/*" }],
+  fields: [
+    { name: "gain", label: "Gain (dB)", type: "number", default: 3, min: -12, max: 12 },
+  ],
+  defaultExt: "mp3",
+  build(ctx) {                      // returns ffmpeg args + output extension
+    return {
+      args: ["-i", ctx.file("audio"), "-af", `volume=${ctx.param("gain")}dB`],
+      ext: "mp3",
+    };
+  },
+});
+```
+
+`build(ctx)` receives uploaded file paths (`ctx.file()` / `ctx.files()`), user params
+(`ctx.param()`), and probed media info (`ctx.media`, `ctx.duration`).
+
+## 🩺 Troubleshooting
+
+- **"ffmpeg not found"** at startup → install FFmpeg or set `FFMPEG_PATH`/`FFPROBE_PATH`
+- **Port already in use** → pick another port (`set MEDIA_NEST_PORT=8080`, then re-run the launcher)
+- **Portal shows no tools** → check `http://localhost:4000/api/health`; if it fails, the server isn't running
+- **Launcher opens but server is dead** → close any stray `node.exe` processes, then run `server/npm install` manually
+
+## 🧱 Tech Stack
+
+- **Front-end:** vanilla HTML/CSS/JavaScript (no frameworks, no build step)
+- **Back-end:** Node.js + Express 4, Multer 2 uploads, child-process FFmpeg/ffprobe
+- **Processing engine:** [FFmpeg](https://ffmpeg.org) — encoding, filtering, palette GIFs
+
+---
+
+*MediaNest · local-first media editing for everyone 🎬*
