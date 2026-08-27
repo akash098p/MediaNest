@@ -25,64 +25,6 @@ Everything runs locally through the bundled Node server — files never leave yo
 
 ---
 
-## 🚀 Quick Start
-
-### Requirements
-
-| Need | Notes |
-|---|---|
-| [Node.js](https://nodejs.org) 18+ | Only runtime dependency (`express` + `multer` auto-install on first run) |
-| [FFmpeg](https://ffmpeg.org) | Must be on `PATH` (or point `FFMPEG_PATH` / `FFPROBE_PATH` at the binaries) |
-
-### Easiest way (Windows)
-
-Double-click **`run-tools.bat`**. It will:
-
-1. Verify Node.js is installed
-2. Run `npm install` inside `server/` on first launch
-3. Start the server (skips startup if it already responds)
-4. Open the Tools Portal in your default browser
-
-### Manual way (any OS)
-
-```bash
-cd server
-npm install
-npm start            # serves on http://localhost:4000
-```
-
-Then visit:
-
-- Tools Portal → **http://localhost:4000/tools/index.html**
-- Main Editor → **http://localhost:4000/index.html**
-
-> 💡 Use a different port with `PORT=8080` (manual) or `set MEDIA_NEST_PORT=8080` before running `run-tools.bat`.
-
----
-
-## 📁 Project Structure
-
-```
-Media-Nest/
-├── index.html            # Main editor application
-├── run-tools.bat         # One-click Windows launcher
-├── css/                  # Editor stylesheets
-├── js/                   # Editor front-end modules (timeline, recorder,
-│                         #   effects, exporter, storage, speech-bubble…)
-├── assets/ fonts/        # Static resources
-├── icons/                # Per-tool PNG icons
-├── libraries/ workers/   # Vendored libs & web workers
-├── tools/
-│   ├── index.html        # Tools Portal homepage (grouped tool cards)
-│   ├── tool.html         # Generic per-tool page (form built from the registry)
-│   └── tools.css         # Portal styling
-└── server/
-    ├── server.js         # Express app: static hosting + JSON API
-    ├── package.json      # express ^4, multer ^2 (no other deps!)
-    ├── lib/ffmpeg.js     # ffmpeg/ffprobe wrappers + media probing
-    └── tools.js          # ★ The 27-tool registry — edit me to add tools
-```
-
 ## 🎞️ MediaNest Editor
 
 The main app (`index.html`) is a full multi-workspace editing environment:
@@ -163,6 +105,68 @@ How jobs are handled:
 | **GIF to Video** | Turn an animated GIF into a shareable video | MP4 (+faststart) / WebM VP9 / MOV; odd sizes auto-aligned to even pixels |
 | **Create GIF from Images** | Build a slideshow GIF from a set of images shown in order | Seconds per image; fps; canvas W × H |
 
+---
+
+## 🚀 Quick Start
+
+### Requirements
+
+| Need | Notes |
+|---|---|
+| [Node.js](https://nodejs.org) 18+ | Only runtime dependency (`express` + `multer` auto-install on first run) |
+| [FFmpeg](https://ffmpeg.org) | Must be on `PATH` (or point `FFMPEG_PATH` / `FFPROBE_PATH` at the binaries) |
+
+### Easiest way (Windows)
+
+Double-click **`run-tools.bat`**. It will:
+
+1. Verify Node.js is installed
+2. Run `npm install` inside `server/` on first launch
+3. Start the server (skips startup if it already responds)
+4. Open the Tools Portal in your default browser
+
+### Manual way (any OS)
+
+```bash
+cd server
+npm install
+npm start            # serves on http://localhost:4000
+```
+
+Then visit:
+
+- Tools Portal → **http://localhost:4000/tools/index.html**
+- Main Editor → **http://localhost:4000/index.html**
+
+> 💡 Use a different port with `PORT=8080` (manual) or `set MEDIA_NEST_PORT=8080` before running `run-tools.bat`.
+
+---
+
+## 📁 Project Structure
+
+```
+Media-Nest/
+├── index.html            # Main editor application
+├── run-tools.bat         # One-click Windows launcher
+├── css/                  # Editor stylesheets
+├── js/                   # Editor front-end modules (timeline, recorder,
+│                         #   effects, exporter, storage, speech-bubble…)
+├── assets/ fonts/        # Static resources
+├── icons/                # Per-tool PNG icons
+├── libraries/ workers/   # Vendored libs & web workers
+├── tools/
+│   ├── index.html        # Tools Portal homepage (grouped tool cards)
+│   ├── tool.html         # Generic per-tool page (form built from the registry)
+│   └── tools.css         # Portal styling
+└── server/
+    ├── server.js         # Express app: static hosting + JSON API
+    ├── package.json      # express ^4, multer ^2 (no other deps!)
+    ├── lib/ffmpeg.js     # ffmpeg/ffprobe wrappers + media probing
+    └── tools.js          # ★ The 27-tool registry — edit me to add tools
+```
+
+---
+
 ## 🔌 REST API
 
 | Method | Route | Purpose |
@@ -223,4 +227,17 @@ tools.push({
 
 ---
 
-*MediaNest · local-first media editing for everyone 🎬*
+## 📬 Contact
+
+<h3>Akash Pramanik</h3>
+
+<p>
+  <strong>For questions or support: </strong>
+<a href="https://instagram.com/akash.098p" target="_blank">
+  <img src="https://img.shields.io/badge/akash.098p-E4405F?style=flat&logo=instagram&logoColor=white"/>
+</a> 
+
+<a href="mailto:akashpramanik098@gmail.com">
+  <img src="https://img.shields.io/badge/akashpramanik422%40gmail.com-D14836?style=flat&logo=gmail&logoColor=white"/>
+</a>
+</p>
