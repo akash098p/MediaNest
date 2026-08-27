@@ -25,6 +25,11 @@ Everything runs locally through the bundled Node server — files never leave yo
 
 ---
 
+## 📷 Screenshots
+
+
+---
+
 ## 🎞️ MediaNest Editor
 
 The main app (`index.html`) is a full multi-workspace editing environment:
@@ -69,16 +74,16 @@ How jobs are handled:
 |---|---|---|
 | **Audio Converter** | Convert between MP3, WAV, OGG, FLAC, M4A, AAC, OPUS and more | Output format; bitrate *Auto* (mirrors source) or 96–320 kbps |
 | **Add Cover Art / MP4** | Embed album art into an MP3, or combine audio + image into an MP4 "music video" | MP3-cover or MP4 mode; output width/height |
+| **Audio Compressor** | Shrink file size to a fraction of the **source** bitrate — never bigger | light / balanced / strong / extreme · keep/auto format · mono downmix |
+| **Audio Transition (Fade)** | Smooth fade-in / fade-out transitions, auto-timed to track length | Fade-in & fade-out seconds |
+| **Merge Audio (Concatenate)** | Join multiple files end-to-end into one track | Multi-select, plays in the chosen order |
 | **Change Audio Speed** | Speed up or slow down audio **without changing pitch** | 0.25× – 4× speed |
 | **Trim Audio** | Extract a segment losslessly (stream copy) | Start & end in `mm:ss` or seconds |
 | **Increase / Decrease Volume** | Raise or lower loudness | Gain from −30 dB to +30 dB |
-| **Merge Audio (Concatenate)** | Join multiple files end-to-end into one track | Multi-select, plays in the chosen order |
 | **Mix Audio** | Overlay tracks so they play **at the same time** | Multi-select; longest input wins |
 | **Remove Noise** | Reduce background hiss/static via FFmpeg's `afftdn` filter | Noise reduction −40…−5 dB |
 | **Remove Silence** | Strip leading/trailing silence and long dead gaps | Threshold (dB) + minimum gap length |
-| **Audio Compressor** | Shrink file size to a fraction of the **source** bitrate — never bigger | light / balanced / strong / extreme · keep/auto format · mono downmix |
 | **Repair M4A** | Rebuild truncated or damaged M4A/MP4 audio by remuxing | — |
-| **Audio Transition (Fade)** | Smooth fade-in / fade-out transitions, auto-timed to track length | Fade-in & fade-out seconds |
 
 ### 🎥 Video (10)
 
@@ -87,13 +92,13 @@ How jobs are handled:
 | **Extract Audio from Video** | Save a video's soundtrack as its own audio file | mp3 / wav / aac / m4a / ogg / flac |
 | **Remove Sound from Video** | Delete the audio track — video stream is copied untouched | — |
 | **Video Compressor** | Targets a fraction of the source bitrate so the result is **always smaller** | Level; optional width scale; MP4 or WebM |
+| **Replace Audio in Video** | Swap a video's soundtrack with a new audio file | Replacement audio upload |
 | **Convert Video Format** | Transcode to MP4, WebM or MOV without bloating the file | Format; Auto quality matches source bitrate (or high/balanced/small) |
 | **Crop Video** | Cut a rectangular region out of any video | Width / height / X / Y in pixels |
 | **Resize Video** | Scale to new dimensions while keeping aspect ratio | Target W × H |
 | **Rotate Video** | Straighten sideways phone clips | 90° / 180° / 270° |
 | **Trim Video** | Keep only a start→end slice | Timestamps |
 | **Merge Videos** | Concatenate multiple clips into a single file | Multi-select order |
-| **Replace Audio in Video** | Swap a video's soundtrack with a new audio file | Replacement audio upload |
 
 ### 🌈 GIF (5)
 
@@ -118,6 +123,12 @@ How jobs are handled:
 
 ### Easiest way (Windows)
 
+Clone the repository:
+   ```bash
+   git clone https://github.com/akash098p/MediaNest.git
+   cd MediaNest
+   ```
+
 Double-click **`run-tools.bat`**. It will:
 
 1. Verify Node.js is installed
@@ -128,6 +139,7 @@ Double-click **`run-tools.bat`**. It will:
 ### Manual way (any OS)
 
 ```bash
+git clone https://github.com/akash098p/MediaNest.git
 cd server
 npm install
 npm start            # serves on http://localhost:4000
