@@ -617,6 +617,126 @@ tools.push({
   },
 });
 
+tools.push({
+  id: "gif-resize-crop",
+  name: "GIF Resize & Crop",
+  group: "GIF",
+  icon: "icons/gif resize and crop.png",
+  description: "Resize an animated GIF to a new width, or center-crop it to exact dimensions.",
+  inputs: [{ name: "gif", label: "GIF image", accept: ".gif,image/gif" }],
+  fields: [
+    { name: "mode", label: "Mode", type: "select", options: ["resize", "crop"] },
+    { name: "width", label: "Width (px)", type: "number", default: 480, min: 8, step: 2 },
+    { name: "height", label: "Height (px, 0 = auto)", type: "number", default: 0, min: 0, step: 2 },
+  ],
+  defaultExt: "gif",
+  build(ctx) {
+    const gif = ctx.file("gif");
+    const w = Math.max(8, Number(ctx.param("width")) || 480);
+    const hRaw = Number(ctx.param("height")) || 0;
+    let vf;
+    if ((ctx.param("mode") || "resize") === "crop") {
+      // Crop needs an explicit height; fall back to a square when omitted.
+      const h = Math.max(8, hRaw > 0 ? hRaw : w);
+      // Scale up until the frame covers the box, then cut the excess evenly.
+      vf = `scale=${w}:${h}:force_original_aspect_ratio=increase:flags=lanczos,crop=${w}:${h}`;
+    } else {
+      vf = `scale=${w}:${hRaw > 0 ? hRaw : -1}:flags=lanczos`;
+    }
+    return { args: [I(gif), "-vf", vf], ext: "gif" };
+  },
+});
+
+tools.push({
+  id: "gif-to-video",
+  name: "GIF to Video",
+  group: "GIF",
+  icon: "icons/gif to video.png",
+  description: "Convert an animated GIF into a shareable MP4, WebM or MOV video file.",
+  inputs: [{ name: "gif", label: "GIF image", accept: ".gif,image/gif" }],
+  fields: [
+    { name: "format", label: "Output format", type: "select", options: ["mp4", "webm", "mov"] },
+  ],
+  defaultExt: "mp4",
+  build(ctx) {
+    const gif = ctx.file("gif");
+    const fmt = ctx.param("format") || "mp4";
+    // GIF dimensions are often odd — align to even pixels so yuv420p/VP9 never choke.
+    const even = "scale=trunc(iw/2)*2:trunc(ih/2)*2";
+    if (fmt === "webm") {
+      return {
+        args: [I(gif), "-vf", even, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "30", "-row-mt", "1", "-an"],
+        ext: "webm",
+      };
+    }
+    const args = [
+      I(gif),
+      "-vf", even,
+      "-c:v", "libx264",
+      "-preset", "medium",
+      "-crf", "23",
+      "-pix_fmt", "yuv420p",
+      "-an",
+    ];
+    if (fmt === "mp4") args.push("-movflags", "+faststart");
+    return { args, ext: fmt };
+  },
+});
+
+tools.push({
+  id: "images-to-gif",
+  name: "Create GIF from Images",
+  group: "GIF",
+  icon: "icons/images to gif.png",
+  description: "Build an animated GIF from a set of images, shown one after another in order.",
+  inputs: [
+    { name: "image", label: "Image files (in order)", accept: "image/*", multiple: true },
+  ],
+  fields: [
+    { name: "delay", label: "Seconds per image", type: "number", default: 0.5, min: 0.05, step: 0.05 },
+    { name: "fps", label: "Frame rate", type: "number", default: 15, min: 5, max: 30, step: 1 },
+    { name: "width", label: "Canvas width (px)", type: "number", default: 480, min: 16, step: 2 },
+    { name: "height", label: "Canvas height (px)", type: "number", default: 480, min: 16, step: 2 },
+  ],
+  defaultExt: "gif",
+  build(ctx) {
+    const imgs = ctx.files("image").map((f) => f.path);
+    if (!imgs.length) throw new Error('Missing required file field: "image"');
+    const delay = Math.max(0.05, Number(ctx.param("delay")) || 0.5);
+    const fps = Math.min(30, Math.max(5, Number(ctx.param("fps")) || 15));
+    const w = Math.max(16, Number(ctx.param("width")) || 480);
+    const h = Math.max(16, Number(ctx.param("height")) || 480);
+
+    // Every still becomes its own looping segment; all are fitted onto one
+    // shared canvas (concat requires identical frame sizes everywhere).
+    const chains = [];
+    const labels = [];
+    const preInput = [];
+    for (let i = 0; i < imgs.length; i++) {
+      // "-loop 1 -t <delay>" must sit right before its own input.
+      preInput.push("-loop", "1", "-t", String(delay), ...I(imgs[i]));
+      chains.push(
+        `[${i}:v]fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease:flags=lanczos,` +
+          `pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1[s${i}]`,
+      );
+      labels.push(`[s${i}]`);
+    }
+
+    const graph =
+      chains.join(";") +
+      ";" +
+      `${labels.join("")}concat=n=${imgs.length}:v=1:a=0[c]` +
+      ";[c]split[a][b]" +
+      ";[a]palettegen[p]" +
+      ";[b][p]paletteuse[out]";
+
+    return {
+      args: [...preInput, "-filter_complex", graph, "-map", "[out]", "-loop", "0"],
+      ext: "gif",
+    };
+  },
+});
+
 // ============================================================
 // EDITING TOOLS (grouped under VIDEO — same media type)
 // ============================================================
