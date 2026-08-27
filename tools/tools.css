@@ -627,3 +627,155 @@ footer {
     animation: none;
   }
 }
+
+/* ---------- Multi-file drag & drop uploader ---------- */
+.uploader {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: 0.18s;
+  user-select: none;
+  outline: none;
+}
+.uploader:hover,
+.uploader:focus-visible {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.uploader.dragover {
+  border-color: var(--accent);
+  background: rgba(79, 124, 255, 0.08);
+  color: var(--text);
+}
+.uploader.disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.dz-icon { font-size: 26px; margin-bottom: 6px; }
+.dz-main { font-weight: 700; color: var(--text); }
+.dz-sub { margin-top: 3px; font-size: 12.5px; }
+
+.upload-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 12px;
+  max-height: 300px;
+  overflow: auto;
+  padding-right: 2px;
+}
+.queue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0 2px 2px;
+}
+.link-danger {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+.link-danger:hover { text-decoration: underline; }
+
+.f-row,
+.r-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-2);
+}
+.f-icon { flex-shrink: 0; }
+.f-meta { min-width: 0; flex: 1; }
+.f-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.f-size {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.f-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.st-work { color: #f7c948; border-color: rgba(247, 201, 72, 0.4); }
+.st-done { color: var(--success); border-color: rgba(47, 213, 139, 0.4); }
+.st-err { color: var(--danger); border-color: rgba(255, 93, 108, 0.45); }
+
+.remove-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  transition: 0.15s;
+}
+.remove-btn:hover { background: var(--danger); color: #fff; }
+
+/* Clickable result names — opens the blob in a new tab for preview */
+.link-like {
+  color: inherit;
+  text-decoration: underline dotted rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+}
+.link-like:hover {
+  text-decoration-style: solid;
+}
+
+/* Hint under the empty output placeholder on batch tools */
+.drop-hint {
+  margin-top: 6px;
+  opacity: 0.85;
+}
+
+/* ---------- Batch results list ---------- */
+.results-summary {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+#resultMedia { display: flex; flex-direction: column; gap: 7px; }
+.btn-sm {
+  padding: 6px 11px;
+  font-size: 12.5px;
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .uploader { transition: none; }
+}
