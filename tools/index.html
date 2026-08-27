@@ -20,6 +20,12 @@
       <img src="../icons/editor.png" alt="Editor" class="editor-icon" />
       <span class="editor-label">Open MediaNest Editor</span>
     </a>
+
+    <!-- Speech balloon: pinned just below the Open Editor button, top-right -->
+    <div class="editor-speech" id="editorSpeechBubble" role="note" aria-label="About the MediaNest editor">
+      <button type="button" class="speech-close" id="speechClose" aria-label="Dismiss message">&times;</button>
+      <p class="speech-line"><span id="editorSpeechText"></span><span class="type-cursor" aria-hidden="true"></span></p>
+    </div>
   </nav>
 </header>
 
@@ -49,7 +55,7 @@
           <img src="../icons/video group.png" alt="Video" class="cat-icon" />
           <h3>Video Tools</h3>
         </div>
-        <p>Compress videos to a fraction of the original bitrate, extract or strip the audio track, and make quick edits — convert format, crop, resize, rotate, trim, merge clips and swap the soundtrack.</p>
+        <p>Compress videos to a fraction of the original bitrate, extract or strip the audio track, remove sound from video & replace audio and make quick edits — convert format, crop, resize, rotate, trim, merge clips and swap the soundtrack.</p>
         <ul class="tool-list" data-group="Video"><li class="loading">Loading tools…</li></ul>
       </div>
 
@@ -58,7 +64,7 @@
           <img src="../icons/gif group.png" alt="GIF" class="cat-icon" />
           <h3>GIF Tools</h3>
         </div>
-        <p>Shrink animated GIFs by scaling them down and lowering the frame rate. Convert any video clip into an optimized animated GIF using FFmpeg's palette generation for crisp, colorful results every time.</p>
+        <p>Shrink animated GIFs by scaling them down and lowering the frame rate. Convert any video clip into an optimized animated GIF. Resize or center-crop GIFs, turn them into MP4/WebM videos, or create a brand-new GIF straight from a folder of images.</p>
         <ul class="tool-list" data-group="GIF"><li class="loading">Loading tools…</li></ul>
       </div>
     </div>
@@ -72,6 +78,7 @@
   <p style="margin-top:6px;opacity:0.75">Tip — Press <b>Ctrl+F</b> to quickly find a tool.</p>
 </footer>
 
+<script src="../js/speech-bubble.js"></script>
 <script src="tools.js"></script>
 </body>
 </html>
