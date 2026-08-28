@@ -102,59 +102,131 @@ tools.push({
   name: "Add Cover Art / MP4",
   group: "Audio",
   icon: "icons/add cover to audio.png",
-  description: "Attach album art to MP3, or turn audio + image into an MP4 music video.",
+  description: "Attach album art to MP3, or turn audio + image into an MP4 music video. Up to 5 audio + image pairs in one go.",
+  // Up to 5 audio + image pairs. The form lets the user pick 1, 2, 3, 4, or 5
+  // pairs and submit them all in one request. The server loops over each
+  // populated pair and returns a list of outputs (the client bundles them
+  // into one ZIP). Empty slots are silently skipped.
   inputs: [
-    { name: "audio", label: "Audio file", accept: "audio/*" },
-    { name: "image", label: "Image (cover / visual)", accept: "image/*" },
+    { name: "audio1", label: "Audio 1", accept: "audio/*" },
+    { name: "image1", label: "Image 1 (cover / visual)", accept: "image/*" },
+    { name: "audio2", label: "Audio 2 (optional)", accept: "audio/*" },
+    { name: "image2", label: "Image 2 (optional)", accept: "image/*" },
+    { name: "audio3", label: "Audio 3 (optional)", accept: "audio/*" },
+    { name: "image3", label: "Image 3 (optional)", accept: "image/*" },
+    { name: "audio4", label: "Audio 4 (optional)", accept: "audio/*" },
+    { name: "image4", label: "Image 4 (optional)", accept: "image/*" },
+    { name: "audio5", label: "Audio 5 (optional)", accept: "audio/*" },
+    { name: "image5", label: "Image 5 (optional)", accept: "image/*" },
   ],
   fields: [
+    // Custom 5-row editor — audio + image in each row, paired visually.
+    // Mounted by mountCoverPairsEditor() in tools/tools.js when the form
+    // is rendered for this tool. See server/tools.js:cover-pairs for the
+    // emit / behaviour contract.
+    { name: "_editor", label: "Pairs editor", type: "editor",
+      editor: { kind: "cover-pairs", pairs: 5 } },
     { name: "mode", label: "Output type", type: "select", options: ["mp3", "mp4"] },
     { name: "w", label: "Video width (px)", type: "number", default: 1280, min: 16 },
     { name: "h", label: "Video height (px)", type: "number", default: 720, min: 16 },
   ],
   defaultExt: "mp4",
   build(ctx) {
-    const audio = ctx.file("audio");
-    const image = ctx.file("image");
     const mode = ctx.param("mode") || "mp4";
     const w = Number(ctx.param("w") || 1280);
     const h = Number(ctx.param("h") || 720);
 
-    if (mode === "mp3") {
-      return {
-        args: [
-          I(audio),
-          I(image),
-          "-map", "0:a:0",
-          "-map", "1:v:0",
-          "-c:a", "copy",
-          "-c:v", "mjpeg",
-          "-q:v", "3",
-          "-disposition:v", "attached_pic",
-          "-id3v2_version", "3",
-        ],
-        ext: "mp3",
-      };
+    // Walk the 5 pairs, skip any with no audio (image without audio would
+    // be invalid). One missing pair is fine; just stop at the first gap.
+    const pairs = [];
+    for (let i = 1; i <= 5; i++) {
+      const audio = (ctx.files(`audio${i}`) || [])[0];
+      const image = (ctx.files(`image${i}`) || [])[0];
+      if (!audio && !image) continue;            // empty slot → skip
+      if (!audio || !image) {
+        throw new Error(
+          `Pair ${i} is incomplete — it has ${audio ? "an audio" : "an image"} but no ` +
+          `${audio ? "image" : "audio"} file.`,
+        );
+      }
+      pairs.push({ audio, image, n: i });
     }
+    if (!pairs.length) {
+      throw new Error('Missing required file field: "audio1" / "image1".');
+    }
+
     const scale =
       `scale=${w}:${h}:force_original_aspect_ratio=increase,` +
       `crop=${w}:${h},format=yuv420p`;
     const ak = Math.min(192, Math.max(64, autoAudioBitrate(ctx.media)));
-    return {
-      args: [
-        I(image),
-        I(audio),
-        "-map", "0:v", "-map", "1:a",
-        "-vf", scale,
-        "-c:v", "libx264",
-        "-preset", "medium",
-        "-c:a", "aac",
-        "-b:a", `${ak}k`,
-        "-shortest",
-        "-r", "30",
-      ],
-      ext: "mp4",
-    };
+
+    const outputs = pairs.map(({ audio, image, n }) => {
+      const base = (audio.name || `pair${n}`).replace(/\.[^.]+$/, "");
+      if (mode === "mp3") {
+        // Pre-normalise the cover to a format the MP3 muxer + mjpeg
+        // encoder can both accept.  Without this, ffmpeg can fail with
+        // "Could not write header" / "vf#0:1 Error sending frames" when
+        // the input image decodes to a pixel format mjpeg doesn't take
+        // directly (RGBA, 16-bit, oddly-subsampled PNG / WebP / HEIC…).
+        //
+        //   * `format=yuvj420p`  → force the canonical embedded-art pix_fmt
+        //   * `scale=...`        → only shrink (never enlarge) and clamp the
+        //                          long edge to 1500px so the cover isn't
+        //                          absurdly large in the ID3 tag.
+        //   * `pad=...`          → round dimensions up to even numbers,
+        //                          which some mjpeg builds require.
+        //
+        // Note: ffmpeg's filter-graph parser splits the chain on commas
+        // and treats a `name=value` as terminated by the first comma.
+        // To put a comma inside an expression value (e.g. `gt(iw,1500)`)
+        // we have to escape it as `\,` so the chain-splitter ignores it.
+        // The `if(gt(...))` form picks the smaller of (max, current) on
+        // each axis independently, which is the correct "cap without
+        // upscale" semantics; the `force_original_aspect_ratio=decrease`
+        // then keeps the image's aspect ratio intact.
+        const vf =
+          "scale=w=if(gt(iw\\,1500)\\,1500\\,iw):h=if(gt(ih\\,1500)\\,1500\\,ih):" +
+          "force_original_aspect_ratio=decrease:flags=lanczos," +
+          "pad=ceil(iw/2)*2:ceil(ih/2)*2," +
+          "format=yuvj420p";
+        return {
+          name: `${base}-cover.mp3`,
+          args: [
+            I(audio.path),
+            I(image.path),
+            "-map", "0:a:0",
+            "-map", "1:v:0",
+            "-vf", vf,
+            "-c:a", "copy",
+            "-c:v", "mjpeg",
+            "-q:v", "3",
+            "-disposition:v", "attached_pic",
+            "-id3v2_version", "3",
+          ],
+          ext: "mp3",
+        };
+      }
+      return {
+        name: `${base}-video.mp4`,
+        args: [
+          I(image.path),
+          I(audio.path),
+          "-map", "0:v", "-map", "1:a",
+          "-vf", scale,
+          "-c:v", "libx264",
+          "-preset", "medium",
+          "-c:a", "aac",
+          "-b:a", `${ak}k`,
+          "-shortest",
+          "-r", "30",
+        ],
+        ext: "mp4",
+      };
+    });
+
+    // `outputs` (plural) tells server.js to produce a ZIP of all entries.
+    // The first entry's ext drives the bundle name (handled server-side).
+    return { outputs, ext: outputs[0].ext };
   },
 });
 
@@ -165,7 +237,12 @@ tools.push({
   icon: "icons/change audio speed.png",
   description: "Speed up or slow down audio without changing pitch.",
   inputs: [{ name: "audio", label: "Audio file", accept: "audio/*" }],
-  fields: [{ name: "speed", label: "Speed (0.5x - 2.0x)", type: "number", default: 1.25, min: 0.25, max: 4, step: 0.05 }],
+  fields: [
+    // Frontend mounts a live Web-Audio preview and writes back to this field.
+    { name: "_editor", label: "Editor", type: "editor",
+      editor: { kind: "speed", emits: ["speed"] } },
+    { name: "speed", label: "Speed (0.5x - 4.0x)", type: "number", default: 1.25, min: 0.25, max: 4, step: 0.05 },
+  ],
   defaultExt: "mp3",
   build(ctx) {
     const audio = ctx.file("audio");
@@ -197,17 +274,30 @@ tools.push({
   description: "Extract a segment (start to end) from an audio file.",
   inputs: [{ name: "audio", label: "Audio file", accept: "audio/*" }],
   fields: [
-    { name: "start", label: "Start (mm:ss or seconds)", type: "text", default: "0" },
-    { name: "end", label: "End (mm:ss or seconds), blank = until the end", type: "text", default: "" },
+    // 'editor' is a client-side hint: the frontend mounts a playable
+    // <audio> with a draggable in/out timeline (the "trim" editor) and
+    // writes the chosen numbers back into the 'start' / 'end' inputs
+    // below. The server only ever sees the plain numbers — the same
+    // shape as the video-trim tool, but the input is audio-only.
+    { name: "_editor", label: "Trim editor", type: "editor",
+      editor: { kind: "trim", emits: ["start", "end"], durationInput: "audio" } },
+    { name: "start", label: "Start (seconds)", type: "number", default: 0, min: 0, step: 0.01 },
+    { name: "end", label: "End (seconds, 0 = until the end)", type: "number", default: 0, min: 0, step: 0.01 },
   ],
   defaultExt: "mp3",
   build(ctx) {
     const audio = ctx.file("audio");
-    const start = ctx.param("start") || "0";
-    const end = ctx.param("end") || "";
-    const args = [];
-    args.push("-ss", String(start));
-    if (end) args.push("-to", String(end));
+    let start = Number(ctx.param("start")) || 0;
+    let end = Number(ctx.param("end")) || 0;
+    // Guard against an inverted pair (start past end) if the user ever
+    // submits the fields directly — ffmpeg -ss/-to with -c copy would
+    // otherwise emit an empty/odd segment. A blank/zero end means
+    // "until the end of the file", exactly like the old text-field
+    // behaviour.
+    if (end <= 0) end = (ctx.media && ctx.media.duration) || 0;
+    if (end < start) [start, end] = [end, start];
+    const args = ["-ss", String(start)];
+    if (end > 0) args.push("-to", String(end));
     args.push(...I(audio));
     args.push("-c", "copy");
     return { args, ext: sameExt(audio) };
@@ -221,7 +311,12 @@ tools.push({
   icon: "icons/volumn control.png",
   description: "Raise or lower the loudness of an audio file.",
   inputs: [{ name: "audio", label: "Audio file", accept: "audio/*" }],
-  fields: [{ name: "volume", label: "Gain (dB)", type: "number", default: 6, min: -30, max: 30, step: 1 }],
+  fields: [
+    // Frontend mounts a live Web-Audio preview and writes back to this field.
+    { name: "_editor", label: "Editor", type: "editor",
+      editor: { kind: "volume", emits: ["volume"] } },
+    { name: "volume", label: "Gain (dB)", type: "number", default: 6, min: -30, max: 30, step: 1 },
+  ],
   defaultExt: "mp3",
   build(ctx) {
     const audio = ctx.file("audio");
@@ -509,6 +604,9 @@ tools.push({
   needDuration: true,
   inputs: [{ name: "audio", label: "Audio file", accept: "audio/*" }],
   fields: [
+    // Frontend mounts a live Web-Audio preview and writes back to these fields.
+    { name: "_editor", label: "Editor", type: "editor",
+      editor: { kind: "audio-transition", emits: ["fadeIn", "fadeOut"] } },
     { name: "fadeIn", label: "Fade-in (seconds)", type: "number", default: 2, min: 0 },
     { name: "fadeOut", label: "Fade-out (seconds)", type: "number", default: 2, min: 0 },
   ],
