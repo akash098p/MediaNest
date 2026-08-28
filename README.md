@@ -25,7 +25,13 @@ Everything runs locally through the bundled Node server — files never leave yo
 
 ---
 
-## 📷 Screenshots
+## 💻 Preview
+
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/02bc12e1-f193-4daf-a4a2-78d51856bb28" controls width="100%";>
+    Your browser does not support the video tag.
+  </video>
+</div>
 
 
 ---
