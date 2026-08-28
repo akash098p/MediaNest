@@ -1971,6 +1971,7 @@ function renderUploadList(listEl, hiddenInput, name, accept) {
         class: "remove-btn",
         title: "Remove",
         "aria-label": `Remove ${item.file.name}`,
+        text: "✕",
         onclick: () => {
           if (busyProcessing) return;
           const arr = filesFor(name);
@@ -2686,6 +2687,25 @@ function clearResults() {
   renderResults();
 }
 
+/** Remove a single row from the results list.  Called by the per-row
+ *  ✕ button.  Revokes the item's blob URL so we don't leak memory,
+ *  drops it from `resultItems`, and invalidates the cached "Download
+ *  all" ZIP — the next ZIP will only contain whatever is still in
+ *  the list, so a removed file can never sneak back in via the
+ *  archive. */
+function removeResult(idx) {
+  if (idx < 0 || idx >= resultItems.length) return;
+  const r = resultItems[idx];
+  if (r && r.url) URL.revokeObjectURL(r.url);
+  resultItems.splice(idx, 1);
+  // The cached archive was built from the previous list, so it may
+  // include the row we just removed.  Throw it away and force a
+  // rebuild on the next "Download all" click.
+  lastZipBlob = null;
+  lastZipName = null;
+  renderResults();
+}
+
 /** Bundle every successful conversion into one ZIP and save it. */
 async function downloadAllZip() {
   const items = resultItems.filter((r) => r.blob && !r.err);
@@ -2752,7 +2772,7 @@ function renderResults() {
       class: "results-summary",
       text: `${items.length} output${items.length > 1 ? "s" : ""} · ${fmtBytes(totalBytes)} total`,
     }),
-    ...items.map((r) => {
+    ...items.map((r, idx) => {
       const rExt = (r.name.split(".").pop() || "").toLowerCase();
       const canPreview = r.url && isPlayableExt(rExt);
       // Inline media preview (audio / video / gif) — placed *above* the
@@ -2805,6 +2825,17 @@ function renderResults() {
             href: r.url,
             download: r.name,
             text: "⬇️ Download",
+          }),
+          // Per-row remove: drops just this result.  Distinct from
+          // the inline-preview "✕" (which only hides the player)
+          // and from the global "🧹 Clear results" button.
+          el("button", {
+            type: "button",
+            class: "r-remove-btn",
+            title: `Remove ${r.name}`,
+            "aria-label": `Remove ${r.name}`,
+            text: "✕",
+            onclick: () => removeResult(idx),
           }),
         ]),
         // Preview area sits in its own column so the video / audio /
