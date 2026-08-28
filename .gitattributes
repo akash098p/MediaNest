@@ -1,0 +1,51 @@
+# Normalise line endings to LF for source files. Binary files
+# (images, audio, video) are explicitly marked so Git never tries
+# to rewrite their bytes. CRLF-on-disk is no longer required —
+# see .editorconfig.
+
+*               text=auto eol=lf
+
+# Source
+*.js            text eol=lf
+*.cjs           text eol=lf
+*.mjs           text eol=lf
+*.css           text eol=lf
+*.html          text eol=lf
+*.json          text eol=lf
+*.md            text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.svg           text eol=lf
+*.txt           text eol=lf
+
+# Scripts / shells
+*.sh            text eol=lf
+*.ps1           text eol=lf
+*.bat           text eol=lf
+*.cmd           text eol=lf
+
+# Generated
+package-lock.json text eol=lf
+
+# Binary — never touched
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.webp          binary
+*.ico           binary
+*.mp3           binary
+*.wav           binary
+*.ogg           binary
+*.flac          binary
+*.m4a           binary
+*.aac           binary
+*.opus          binary
+*.ac3           binary
+*.mp4           binary
+*.webm          binary
+*.mov           binary
+*.mkv           binary
+*.avi           binary
+*.ogv           binary
+*.m4v           binary
