@@ -478,7 +478,8 @@ footer {
   margin: 5px -10px 0;
   padding: 8px 12px;
   border-radius: 9px;
-  border: 1px solid transparent;
+  /* Resting border: makes each tool row visually distinct. */
+  border: 1px solid var(--border);
   color: var(--text);
   font-size: 13px;
   font-weight: 600;
@@ -492,12 +493,12 @@ footer {
 }
 .tool-list li a:hover {
   background: var(--panel-2);
-  border-color: var(--border);
+  border-color: rgb(223, 175, 52);
   transform: translateX(3px);
   text-decoration: none;
 }
 .tool-list li a:hover::after {
-  color: var(--accent);
+  color: goldenrod;
   transform: translateX(2px);
 }
 
