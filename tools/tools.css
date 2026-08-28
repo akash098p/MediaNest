@@ -785,7 +785,8 @@ footer {
   background: rgba(255, 255, 255, 0.06);
   color: var(--muted);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
   line-height: 1;
   transition: 0.15s;
 }
@@ -949,7 +950,8 @@ footer {
   background: rgba(255, 255, 255, 0.07);
   color: var(--muted);
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
   transition: 0.15s;
 }
@@ -1279,6 +1281,37 @@ footer {
   cursor: pointer;
 }
 .r-preview-toggle:hover { background: rgba(0,0,0,0.85); }
+
+/* Per-row remove button.  Sits in the row header next to "Download".
+   Visually distinct from the corner preview ✕: this is a pill with a
+   text label so users won't confuse it with "hide the inline player". */
+.r-remove-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 30px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #2a2f44);
+  background: transparent;
+  color: var(--muted, #8a90a3);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.r-remove-btn:hover {
+  background: rgba(220, 53, 69, 0.12);
+  color: var(--danger, #ff6b6b);
+  border-color: var(--danger, #ff6b6b);
+}
+.r-remove-btn:focus-visible {
+  outline: 2px solid var(--accent, #4f7cff);
+  outline-offset: 2px;
+}
 .r-preview-show {
   display: inline-block;
   align-self: flex-start;
