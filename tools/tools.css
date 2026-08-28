@@ -718,6 +718,30 @@ footer {
   border-radius: 10px;
   background: var(--bg-2);
 }
+/* Result row (batch mode): a column flex with a header strip on top and
+   the inline media preview below. Keeping the header on its own line
+   stops the video/audio player from being squashed next to the
+   download button — it gets the full row width to render in. */
+.r-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.r-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.r-row-head .f-meta { min-width: 0; flex: 1; }
+.r-row-head .btn { flex-shrink: 0; }
+.r-row-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
 .f-icon { flex-shrink: 0; }
 .f-meta { min-width: 0; flex: 1; }
 .f-name {
@@ -799,6 +823,138 @@ footer {
   .uploader { transition: none; }
 }
 
+/* ---------- Cover-pairs editor (Add Cover Art — up to 5 audio+image rows) ---------- */
+.cpe-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.cpe-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-2);
+  overflow: hidden;
+  transition: border-color 0.18s;
+}
+.cpe-row:has(.cpe-cell-file) {
+  border-color: rgba(79, 124, 255, 0.35);
+}
+
+.cpe-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.cpe-row-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.cpe-row.optional .cpe-row-title { opacity: 0.6; }
+.cpe-remove-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.15s;
+  opacity: 0;
+}
+.cpe-row:hover .cpe-remove-btn { opacity: 1; }
+.cpe-remove-btn:hover { background: rgba(255, 93, 108, 0.15); }
+
+.cpe-cells {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.cpe-cell {
+  display: flex;
+  align-items: center;
+  padding: 9px 10px;
+  min-width: 0;
+  gap: 8px;
+}
+.cpe-cell + .cpe-cell {
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Empty upload button */
+.cpe-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.15s;
+  min-width: 0;
+  flex: 1;
+}
+.cpe-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: rgba(79, 124, 255, 0.06);
+}
+.cpe-btn .cpe-btn-icon { font-size: 15px; flex-shrink: 0; }
+.cpe-btn .cpe-btn-text { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+
+/* Filled state */
+.cpe-cell-file {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+}
+.cpe-file-icon { font-size: 15px; flex-shrink: 0; }
+.cpe-file-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cpe-file-size {
+  font-size: 10.5px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.cpe-file-remove {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  transition: 0.15s;
+}
+.cpe-file-remove:hover { background: var(--danger); color: #fff; }
+
 /* ---------- Visual editor (crop / resize / rotate) ---------- */
 .vjs-editor-slot {
   display: block;
@@ -812,12 +968,25 @@ footer {
 /* The <video> element is appended to the slot during loading (so the
    browser will decode frames onto the canvas) and then moved into the
    timeline bar. While it sits anywhere inside the editor area, it must
-   not be visible — otherwise it would show a black rectangle or a
-   real player UI alongside the canvas, which paints the same frame.
-   We hide it everywhere inside the slot, including after it's moved
-   into .vjs-video-bar. (A separate, narrower rule keeps the bar's
-   video hidden too as a defensive fallback.) */
-.vjs-editor-slot video { display: none !important; }
+   not be visible to the user — otherwise it would show a black
+   rectangle or its own controls next to the canvas, which paints the
+   same frame. We do NOT use `display: none` here: most browsers suspend
+   frame decoding for `display: none` videos, which leaves the canvas
+   blank. Instead, we park the element off-screen at 1×1 px with
+   `opacity: 0` so the browser still treats it as laid-out (and decodes
+   frames into it). The .vjs-frame-sink class is applied at creation so
+   the rule matches even before the element is moved into the bar. */
+.vjs-editor-slot video,
+.vjs-frame-sink {
+  position: absolute !important;
+  left: -99999px !important;
+  top: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
 .vjs-editor-toolbar {
   display: flex;
   align-items: center;
@@ -998,7 +1167,6 @@ footer {
   border: 1px solid var(--border, rgba(255,255,255,0.12));
   border-radius: 10px;
 }
-.vjs-video-bar video { display: none; }
 .vjs-play-btn {
   width: 38px; height: 38px;
   border-radius: 50%;
@@ -1063,12 +1231,17 @@ footer {
 .r-preview-wrap {
   position: relative;
   display: block;
-  margin: 8px 0 6px;
+  margin: 0;
   text-align: center;
   background: #000;
   border-radius: 10px;
   border: 1px solid var(--border, rgba(255,255,255,0.12));
   padding: 8px;
+}
+/* Audio previews read better on the panel's lighter surface than on a
+   black box (the player already ships its own dark UI). */
+.r-preview-wrap:has(audio) {
+  background: var(--bg-2, #141826);
 }
 .r-preview-wrap video,
 .r-preview-wrap audio,
@@ -1080,6 +1253,16 @@ footer {
   width: auto;
   height: auto;
   background: transparent;
+}
+/* Audio controls want a touch more breathing room than a video frame.
+   Unlike <video>/<img>, <audio> has no intrinsic dimensions — without
+   `width: 100%` the native browser player collapses to 0px wide and
+   the user sees nothing. */
+.r-preview-wrap audio {
+  padding: 4px 0;
+  max-height: none;
+  width: 100%;
+  height: 40px; /* enough for the play / scrubber / time row on every browser */
 }
 .r-preview-toggle {
   position: absolute;
@@ -1098,7 +1281,8 @@ footer {
 .r-preview-toggle:hover { background: rgba(0,0,0,0.85); }
 .r-preview-show {
   display: inline-block;
-  margin: 6px 0 0;
+  align-self: flex-start;
+  margin: 0;
   padding: 4px 10px;
   font-size: 12px;
   border-radius: 8px;
@@ -1135,6 +1319,29 @@ footer {
   height: 100%;
   max-width: 100%;
   object-fit: contain;
+}
+/* Audio trim: no video frame — just the native <audio> player */
+.vjs-trim-audio {
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  background: #111;
+  border-radius: 12px;
+  padding: 12px 16px 8px;
+  /* Subtle waveform-style visual hint so it doesn't look bare */
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 4px,
+    rgba(255,255,255,0.04) 4px,
+    rgba(255,255,255,0.04) 5px
+  );
+}
+.vjs-trim-audio audio {
+  display: block;
+  width: 100%;
+  /* reset browser default audio height so it matches the container */
+  height: auto;
 }
 .vjs-trim-controls {
   display: flex;
@@ -1245,4 +1452,138 @@ footer {
 .vjs-loop-btn:hover {
   background: rgba(79, 124, 255, 0.18);
   border-color: var(--accent);
+}
+
+/* ---------- Audio effect live preview (volume / speed / audio-transition) ---------- */
+.vae-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: var(--bg-2, #141826);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+.vae-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.vae-header-icon { font-size: 22px; }
+.vae-header-label { color: var(--text, #e8ecf5); }
+.vae-live-badge {
+  margin-left: auto;
+  background: rgba(255, 70, 90, 0.18);
+  color: #ff6370;
+  border: 1px solid rgba(255, 70, 90, 0.35);
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+.vae-player-wrap audio {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Custom player (Play / Stop / time / seek).  Replaces the
+   native <audio controls> that was here before because the actual
+   sound was being produced by a Web Audio context, not the element. */
+.vae-player {
+  display: grid;
+  grid-template-columns: auto auto 56px 1fr 56px auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+}
+.vae-playbtn,
+.vae-stopbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.18));
+  background: var(--accent, #4f7cff);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: filter 120ms ease, background 120ms ease, transform 60ms ease;
+}
+.vae-playbtn:hover,
+.vae-stopbtn:hover { filter: brightness(1.08); }
+.vae-playbtn:active,
+.vae-stopbtn:active { transform: translateY(1px); }
+.vae-playbtn.is-playing {
+  background: rgba(255, 200, 80, 0.18);
+  color: #ffd166;
+  border-color: rgba(255, 200, 80, 0.4);
+}
+.vae-stopbtn {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text, #e8ecf5);
+}
+.vae-playbtn-glyph,
+.vae-stopbtn > span:first-child {
+  font-size: 14px;
+  line-height: 1;
+}
+.vae-time-cur,
+.vae-time-dur {
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  color: var(--text, #e8ecf5);
+  opacity: 0.9;
+  text-align: center;
+}
+.vae-seek {
+  width: 100%;
+  accent-color: var(--accent, #4f7cff);
+  height: 22px;
+  cursor: pointer;
+}
+.vae-status {
+  font-size: 11.5px;
+  padding-left: 4px;
+  min-width: 80px;
+  text-align: right;
+}
+.vae-sliders { display: flex; flex-direction: column; gap: 12px; }
+.vae-slider-row {
+  display: grid;
+  grid-template-columns: 80px 70px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.vae-slider-label {
+  font-weight: 600;
+  color: var(--text, #e8ecf5);
+  font-size: 13px;
+}
+.vae-slider-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--accent, #4f7cff);
+  text-align: right;
+  font-size: 14px;
+}
+.vae-range {
+  width: 100%;
+  accent-color: var(--accent, #4f7cff);
+  height: 22px;
+}
+.vae-dur-hint {
+  grid-column: 1 / -1;
+  text-align: right;
+  font-size: 11.5px;
 }
