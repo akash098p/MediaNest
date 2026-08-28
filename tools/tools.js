@@ -82,13 +82,29 @@ function uniqueName(name, taken) {
 
 function buildField(f) {
   const field = el("div", { class: "field" });
+  if (f.name) field.setAttribute("data-field", f.name);
   field.appendChild(el("label", { text: f.label }));
+
+  if (f.type === "editor") {
+    // The visual editor is built later, in renderTool(), once the user
+    // has chosen a file (we need a frame to draw into). Here we only
+    // leave a clearly-labelled container so the layout doesn't jump.
+    const slot = el("div", { class: "vjs-editor-slot", "data-editor-kind": f.editor.kind });
+    slot.appendChild(el("p", {
+      class: "small",
+      text: "🎨 Add a file above to load the visual editor.",
+    }));
+    field.appendChild(slot);
+    return field;
+  }
 
   if (f.type === "select") {
     const select = el("select", { name: f.name });
     for (const opt of f.options || []) {
-      const optEl = el("option", { value: opt, text: opt });
-      if (f.default === opt) optEl.selected = true;
+      const val = typeof opt === "object" ? opt.value : opt;
+      const text = typeof opt === "object" ? opt.text : opt;
+      const optEl = el("option", { value: val, text });
+      if (f.default === val) optEl.selected = true;
       select.appendChild(optEl);
     }
     field.appendChild(select);
@@ -101,6 +117,11 @@ function buildField(f) {
         min: f.min, max: f.max, step: f.step,
       }),
     );
+    if (f.note) {
+      field.appendChild(
+        el("div", { class: "field-note", text: f.note }),
+      );
+    }
   } else if (f.type === "range") {
     const row = el("div", { class: "range-row" });
     const input = el("input", {
@@ -115,10 +136,845 @@ function buildField(f) {
     field.appendChild(row);
   } else {
     field.appendChild(el("input", { type: "text", name: f.name, value: f.default ?? "" }));
+    if (f.note) field.appendChild(el("div", { class: "field-note", text: f.note }));
   }
   return field;
 }
 
+/* ------------------------------------------------------------------ */
+/* Conditional field visibility (fields with a `dependsOn` rule are    */
+/* shown/hidden based on a controlling select — e.g. the compressor's  */
+/* mode selector reveals the matching compression control).            */
+/* ------------------------------------------------------------------ */
+function applyFieldVisibility() {
+  const form = $("#toolForm");
+  if (!form || !toolMeta) return;
+  for (const f of toolMeta.fields || []) {
+    if (!f.dependsOn) continue;
+    const ctrl = form.querySelector(`[name="${f.dependsOn.field}"]`);
+    const target = form.querySelector(`[data-field="${f.name}"]`);
+    if (!target) continue;
+    const show =
+      !ctrl || ctrl.tagName !== "SELECT" || ctrl.value === String(f.dependsOn.value);
+    target.style.display = show ? "" : "none";
+  }
+}
+
+function wireFieldVisibility() {
+  const form = $("#toolForm");
+  if (!form || !toolMeta) return;
+  for (const f of toolMeta.fields || []) {
+    if (!f.dependsOn) continue;
+    const ctrl = form.querySelector(`[name="${f.dependsOn.field}"]`);
+    if (ctrl && ctrl.tagName === "SELECT" && !ctrl.dataset.fieldWired) {
+      ctrl.dataset.fieldWired = "1";
+      ctrl.addEventListener("change", applyFieldVisibility);
+    }
+  }
+  applyFieldVisibility();
+}
+
+/* ------------------------------------------------------------------ */
+/* Visual editor — drag-to-crop / drag-to-resize / drag-to-rotate      */
+/* ------------------------------------------------------------------ */
+function findEditorField() {
+  return (toolMeta?.fields || []).find((f) => f.type === "editor") || null;
+}
+function pickEditorFile() {
+  const editor = findEditorField();
+  if (!editor) return null;
+  const primary =
+    (toolMeta.inputs || []).find((i) => !i.multiple) || (toolMeta.inputs || [])[0];
+  if (!primary) return null;
+  const items = filesFor(primary.name);
+  if (!items.length) return null;
+  return items[0]?.file || null;
+}
+function writeEditorOutputs(values) {
+  const form = $("#toolForm");
+  if (!form) return;
+  for (const [k, v] of Object.entries(values || {})) {
+    const node = form.querySelector(`[name="${k}"]`);
+    if (node) node.value = String(v);
+  }
+}
+function isVideoFile(f) {
+  if (!f) return false;
+  if (f.type && String(f.type).startsWith("video/")) return true;
+  return /\.(mp4|webm|mov|mkv|avi|ogv|m4v)$/i.test(f.name || "");
+}
+function videoReady(v) {
+  // Wait for a decoded frame to be available — `loadedmetadata` alone is
+  // not enough because some codecs (e.g. webm) report dimensions only
+  // after `loadeddata`. Without this, videoWidth/videoHeight can read 0
+  // and the editor falls into its "could not read dimensions" branch.
+  return new Promise((resolve, reject) => {
+    if (v.readyState >= 2) return resolve();
+    const ok = () => resolve();
+    v.addEventListener("loadeddata", ok, { once: true });
+    v.addEventListener("canplay", ok, { once: true });
+    v.addEventListener("error", () => reject(new Error("Could not read the video file.")), { once: true });
+  });
+}
+function getFormNumber(name) {
+  const node = document.querySelector(`#toolForm [name="${name}"]`);
+  if (!node) return 0;
+  const v = Number(node.value);
+  return Number.isFinite(v) ? v : 0;
+}
+
+async function mountVisualEditor() {
+  const editor = findEditorField();
+  if (!editor) return;
+  const slot = document.querySelector(".vjs-editor-slot");
+  if (!slot) return;
+
+  const file = pickEditorFile();
+  if (!file) {
+    slot.replaceChildren(
+      el("p", { class: "small", text: "🎨 Add a file above to load the visual editor." }),
+    );
+    return;
+  }
+
+  slot.replaceChildren();
+  slot.appendChild(el("p", { class: "small", text: "Loading preview…" }));
+
+  // ---- load the source frame (or first video frame) ----
+  let srcW = 0, srcH = 0, drawable = null;
+  let videoEl = null; // visible player (kept in the timeline bar), drives the canvas.
+  try {
+    const url = URL.createObjectURL(file);
+    if (isVideoFile(file)) {
+      // The <video> needs to be in the DOM for the browser to decode
+      // frames (some browsers won't draw a detached <video> onto a
+      // canvas). We append it to the slot now (hidden via CSS) and
+      // later move it into the timeline bar. The CSS rule
+      // `.vjs-editor-slot video { display: none !important }` keeps it
+      // invisible everywhere inside the editor (including after the
+      // move into the bar) so the canvas is the only visible picture.
+      videoEl = el("video", { src: url, muted: "", playsinline: "", preload: "auto" });
+      slot.appendChild(videoEl);
+      await videoReady(videoEl);
+      // Seek a hair into the clip so the first frame the canvas paints
+      // is the actual content, not a black opening frame. For very
+      // short clips (under ~0.4s) this resolves to time 0.
+      videoEl.currentTime = Math.min(0.1, (videoEl.duration || 0) / 4 || 0);
+      await new Promise((res) => videoEl.addEventListener("seeked", res, { once: true }));
+      srcW = videoEl.videoWidth; srcH = videoEl.videoHeight;
+      drawable = videoEl;
+    } else {
+      const img = new Image();
+      img.src = url;
+      await new Promise((res, rej) => {
+        img.onload = res; img.onerror = () => rej(new Error("Could not read the image."));
+      });
+      srcW = img.naturalWidth; srcH = img.naturalHeight;
+      drawable = img;
+    }
+  } catch (err) {
+    // Make sure we don't leak a detached <video> if we abort here.
+    if (videoEl && videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
+    slot.replaceChildren(el("p", { class: "small", text: `⚠ ${err.message}` }));
+    return;
+  }
+
+  if (!srcW || !srcH) {
+    if (videoEl && videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
+    slot.replaceChildren(el("p", { class: "small", text: "⚠ Could not read the file dimensions." }));
+    return;
+  }
+
+  // For videos, some browsers (notably webm on Chromium) report
+  // videoWidth/videoHeight = 0 even after `loadedmetadata` and a
+  // successful seek. If that happens, fall back to the natural canvas
+  // size and wait one more frame for the decoder to publish real
+  // dimensions. We don't abort the editor — we just retry the read.
+  if (drawable && drawable.tagName === "VIDEO" && (drawable.videoWidth === 0 || drawable.videoHeight === 0)) {
+    await new Promise((res) => drawable.addEventListener("loadeddata", res, { once: true }));
+    if (drawable.videoWidth > 0 && drawable.videoHeight > 0) {
+      srcW = drawable.videoWidth;
+      srcH = drawable.videoHeight;
+    } else {
+      // Last-resort default so the editor at least renders something
+      // usable instead of crashing on a 0-size canvas.
+      srcW = srcW || 1920;
+      srcH = srcH || 1080;
+    }
+  }
+
+  const cfg = editor.editor;
+  const out = {};
+  for (const k of cfg.emits) out[k] = Number(getFormNumber(k)) || 0;
+  if (cfg.kind === "crop" || cfg.kind === "resize") {
+    // Pick a sensible initial box that scales with the source, instead
+    // of relying on the (often tiny) form defaults. The form values
+    // are still used when the user has set something meaningful (e.g.
+    // re-opened an edited file), so we only override when the form
+    // value is "clearly too small" (less than 30% of the source on
+    // its longest side).
+    const minW = Math.max(8, Math.round(srcW * 0.3));
+    const minH = Math.max(8, Math.round(srcH * 0.3));
+    const defW = Math.min(srcW, Math.max(minW, Math.round(srcW * 0.6)));
+    const defH = Math.min(srcH, Math.max(minH, Math.round(srcH * 0.6)));
+    if (cfg.emits.includes("w") && (!out.w || out.w < minW)) out.w = defW;
+    if (cfg.emits.includes("h") && (!out.h || out.h < minH)) out.h = defH;
+    if (cfg.emits.includes("x") && (!out.x || out.x + (out.w || 0) > srcW))
+      out.x = Math.max(0, Math.round((srcW - (out.w || defW)) / 2));
+    if (cfg.emits.includes("y") && (!out.y || out.y + (out.h || 0) > srcH))
+      out.y = Math.max(0, Math.round((srcH - (out.h || defH)) / 2));
+    if (cfg.emits.includes("width")  && (!out.width  || out.width  < minW)) out.width  = srcW;
+    if (cfg.emits.includes("height") && (out.height == null || out.height < 0)) out.height = 0;
+  }
+  if (cfg.kind === "rotate" && (out.degrees == null || isNaN(out.degrees))) out.degrees = 0;
+  writeEditorOutputs(out);
+
+  // The "trim" editor is video-only and uses a totally different layout — a
+  // playable <video> with a draggable in/out timeline — so it's assembled by a
+  // dedicated helper and returns early before the crop/resize/rotate canvas
+  // stage is built.
+  if (cfg.kind === "trim") {
+    await mountTrimEditor(slot, videoEl, srcW, srcH, cfg);
+    return;
+  }
+
+  // ---- DOM scaffolding ----
+  // IMPORTANT: if we have a <video>, keep it in the DOM while building the
+  // stage. Some browsers won't paint a detached <video> onto a canvas, so
+  // `replaceChildren()` would blank the preview. The video is hidden via
+  // CSS (`.vjs-editor-slot video { display: none !important }`) until it
+  // gets moved into the timeline bar a few lines further down.
+  slot.replaceChildren(...(videoEl ? [videoEl] : []));
+  const toolbar = el("div", { class: "vjs-editor-toolbar" });
+  const presetSel = el("select", { class: "vjs-preset" });
+  for (const p of cfg.presets || []) {
+    const opt = el("option", { value: p.value, text: p.text });
+    if (p.value === cfg.defaultPreset) opt.selected = true;
+    presetSel.appendChild(opt);
+  }
+  toolbar.appendChild(el("label", { class: "vjs-preset-label", text: "Preset:" }));
+  toolbar.appendChild(presetSel);
+
+  const readout = el("span", { class: "vjs-readout" });
+  toolbar.appendChild(readout);
+
+  let aspectLock = !!cfg.lockAspect;
+  if (cfg.kind !== "rotate") {
+    const lockBtn = el("button", {
+      type: "button", class: "vjs-lock btn btn-sm", title: "Lock aspect ratio",
+      text: aspectLock ? "🔒 Aspect locked" : "🔓 Aspect unlocked",
+    });
+    lockBtn.addEventListener("click", () => {
+      aspectLock = !aspectLock;
+      lockBtn.textContent = aspectLock ? "🔒 Aspect locked" : "🔓 Aspect unlocked";
+      lockBtn.classList.toggle("is-on", aspectLock);
+      applyPreset(presetSel.value);
+    });
+    if (aspectLock) lockBtn.classList.add("is-on");
+    toolbar.appendChild(lockBtn);
+  }
+
+  const stage = el("div", { class: "vjs-stage" });
+  // The .vjs-frame wraps the canvas + the absolutely-positioned overlay.
+  // Sizing the frame to exactly the canvas (not the whole stage) means the
+  // overlay's coordinates line up perfectly with the pixels on screen — this
+  // is what fixes the "draggable bars don't align with the video" bug, where
+  // the overlay used to be anchored at the stage's top-left corner.
+  const frame = el("div", { class: "vjs-frame" });
+  const canvas = el("canvas", { class: "vjs-canvas" });
+  const overlay = el("div", { class: "vjs-overlay" });
+  frame.appendChild(canvas);
+  frame.appendChild(overlay);
+  stage.appendChild(frame);
+
+  const handles = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+  const body = el("div", { class: "vjs-box" });
+  for (const h of handles) body.appendChild(el("div", { class: `vjs-handle vjs-h-${h}`, "data-handle": h }));
+  // The orange rotation handle and the connecting stalk are only useful
+  // for the Rotate tool. Showing them on Crop/Resize confuses users
+  // (they look draggable but do nothing, and they sit in the space above
+  // the box where the N handle / top edge would be reached).
+  let rotHandle = null;
+  if (cfg.kind === "rotate") {
+    rotHandle = el("div", { class: "vjs-rot-handle", title: "Drag to rotate" });
+    body.appendChild(rotHandle);
+  } else {
+    body.classList.add("vjs-box-no-rotate");
+  }
+  overlay.appendChild(body);
+
+  const resetBtn = el("button", { type: "button", class: "btn btn-sm", text: "↺ Reset" });
+  toolbar.appendChild(resetBtn);
+
+  slot.appendChild(toolbar);
+  slot.appendChild(stage);
+
+  // Short hint under the canvas explaining what this tool actually does.
+  // Resize scales the whole image, so the box can't be moved; Crop picks
+  // a sub-region, so the box can be moved + resized.
+  const hintText = cfg.kind === "resize"
+    ? "Resizes the whole image to the chosen dimensions. To pick a sub-region, use Crop."
+    : cfg.kind === "crop"
+    ? "Selects a rectangular region of the source. Drag handles to resize, drag inside to move."
+    : cfg.kind === "rotate"
+    ? "Rotates the image. Drag the orange handle above the box, or type an angle."
+    : null;
+  if (hintText) {
+    slot.appendChild(el("p", { class: "vjs-hint small", text: hintText }));
+  }
+
+  // ---- video timeline (play / pause / scrub / frame step) ----
+  // For video tools we expose a play button + scrubber so the user can edit
+  // while the video is playing — the canvas is redrawn from <video> on every
+  // playhead update, which keeps the crop box aligned with the current frame.
+  if (videoEl) {
+    const bar = el("div", { class: "vjs-video-bar" });
+    const playBtn = el("button", { type: "button", class: "vjs-play-btn", title: "Play / Pause" }, ["▶"]);
+    const scrubber = el("input", {
+      type: "range", class: "vjs-scrubber", min: "0", max: "1", step: "0.001", value: "0",
+    });
+    const time = el("span", { class: "vjs-time", text: "0:00.0 / 0:00.0" });
+    const backBtn = el("button", { type: "button", class: "vjs-frame-btn", title: "Previous frame" }, ["⟨ frame"]);
+    const fwdBtn = el("button", { type: "button", class: "vjs-frame-btn", title: "Next frame" }, ["frame ⟩"]);
+    bar.append(backBtn, playBtn, scrubber, time, fwdBtn);
+    // Move the live <video> element from the slot (where the loader placed it)
+    // into the timeline bar so playback works alongside the canvas.
+    if (videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
+    bar.appendChild(videoEl);
+    slot.appendChild(bar);
+
+    const fmtT = (s) => {
+      if (!Number.isFinite(s)) return "0:00.0";
+      const m = Math.floor(s / 60);
+      const sec = s - m * 60;
+      return `${m}:${sec.toFixed(1).padStart(4, "0")}`;
+    };
+    const refreshTime = () => {
+      scrubber.value = String(videoEl.currentTime || 0);
+      time.textContent = `${fmtT(videoEl.currentTime)} / ${fmtT(videoEl.duration)}`;
+      playBtn.textContent = videoEl.paused ? "▶" : "⏸";
+    };
+    playBtn.addEventListener("click", () => {
+      if (videoEl.paused) videoEl.play().catch(() => {});
+      else videoEl.pause();
+    });
+    backBtn.addEventListener("click", () => {
+      videoEl.pause();
+      videoEl.currentTime = Math.max(0, videoEl.currentTime - 1 / 30);
+    });
+    fwdBtn.addEventListener("click", () => {
+      videoEl.pause();
+      videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 1 / 30);
+    });
+    scrubber.addEventListener("input", () => {
+      videoEl.pause();
+      videoEl.currentTime = Number(scrubber.value) || 0;
+    });
+    videoEl.addEventListener("seeked", () => { refreshTime(); redraw(); });
+    videoEl.addEventListener("timeupdate", () => { refreshTime(); redraw(); });
+    videoEl.addEventListener("play", refreshTime);
+    videoEl.addEventListener("pause", refreshTime);
+    // Re-paint the canvas once the first decoded frame is available.
+    // `loadeddata` fires after `loadedmetadata` once at least one frame
+    // is decoded — without this, a freshly dropped video that finishes
+    // decoding after the initial `redraw()` call would leave a blank
+    // canvas.
+    videoEl.addEventListener("loadeddata", redraw);
+    videoEl.addEventListener("loadedmetadata", () => {
+      scrubber.max = String(videoEl.duration || 0);
+      refreshTime();
+      redraw();
+    });
+    refreshTime();
+  }
+
+  // ---- sizing helpers ----
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  let renderW = 0, renderH = 0;
+  function fit() {
+    // Cap the editor so the canvas never grows beyond the working area.
+    // We read the slot's content width (not the stage's) because the
+    // stage is a flex container that shrinks to its child — reading
+    // stage.clientWidth here would give the previous frame size, not
+    // the available space. The slot is the stable outer container.
+    const slotEl = stage.parentElement || slot;
+    const maxW = (slotEl.clientWidth || 520) - 4; // small margin
+    // Allow the canvas to be reasonably tall so portrait videos still
+    // have room to drag handles. The 0.75 factor keeps the page from
+    // getting dominated by a single tall canvas.
+    const maxH = Math.max(
+      320,
+      Math.min(720, Math.floor(window.innerHeight * 0.75)),
+    );
+    const safeSrcW = Math.max(1, srcW || 1);
+    const safeSrcH = Math.max(1, srcH || 1);
+    const r = Math.min(maxW / safeSrcW, maxH / safeSrcH, 1);
+    renderW = Math.max(64, Math.round(safeSrcW * r));
+    renderH = Math.max(64, Math.round(safeSrcH * r));
+    canvas.width = renderW * dpr; canvas.height = renderH * dpr;
+    canvas.style.width = renderW + "px"; canvas.style.height = renderH + "px";
+    // Size the frame to the canvas so the overlay (inset:0) lines up
+    // pixel-for-pixel with what's painted.
+    frame.style.width = renderW + "px";
+    frame.style.height = renderH + "px";
+    // Give the stage a stable min-height so the bar + toolbar + canvas
+    // always have room and the page doesn't jump on every fit() call.
+    stage.style.minHeight = renderH + 24 + "px";
+    redraw();
+    // Re-apply the current crop/rotate box now that the display size
+    // changed — the box position is in source pixels, but its on-screen
+    // size depends on renderW/renderH, so re-syncBox is required.
+    syncBox(read());
+  }
+  function redraw() {
+    // Bail out if the canvas hasn't been sized yet or the drawable isn't
+    // ready — drawImage() on a not-yet-decoded <video> throws or draws a
+    // black frame. The `seeked` / `loadeddata` / `loadedmetadata` listeners
+    // below call redraw() again once a frame is available.
+    if (!canvas.width || !canvas.height || !renderW || !renderH) return;
+    if (drawable && drawable.tagName === "VIDEO" && drawable.readyState < 2) return;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, renderW, renderH);
+    ctx.drawImage(drawable, 0, 0, renderW, renderH);
+  }
+  const toDisp = (sx, sy) => ({ x: (sx / srcW) * renderW, y: (sy / srcH) * renderH });
+
+  const read = () => {
+    const o = {};
+    for (const k of cfg.emits) o[k] = Number(getFormNumber(k)) || 0;
+    if (cfg.kind === "rotate") o.degrees = ((o.degrees % 360) + 360) % 360;
+    return o;
+  };
+  const write = (o) => {
+    if (cfg.kind !== "rotate") {
+      if ("w" in o) o.w = Math.max(8, Math.min(srcW, Math.round(o.w)));
+      if ("h" in o) o.h = Math.max(8, Math.min(srcH, Math.round(o.h)));
+      if ("x" in o) o.x = Math.max(0, Math.min(srcW - (o.w || 1), Math.round(o.x)));
+      if ("y" in o) o.y = Math.max(0, Math.min(srcH - (o.h || 1), Math.round(o.y)));
+      if ("width"  in o) o.width  = Math.max(8, Math.round(o.width));
+      if ("height" in o && o.height > 0) o.height = Math.max(8, Math.round(o.height));
+    }
+    writeEditorOutputs(o);
+    syncBox(o);
+  };
+  function syncBox(o) {
+    if (cfg.kind === "rotate") {
+      // The rotation box should cover the whole rendered image so the
+      // handles (and the rotation drag) sit on the actual picture, not
+      // at the top-left corner. Position the box at the canvas center
+      // and size it to the full canvas; the transform then rotates it
+      // around its own center.
+      body.style.left = (renderW / 2) + "px";
+      body.style.top = (renderH / 2) + "px";
+      body.style.width = renderW + "px";
+      body.style.height = renderH + "px";
+      body.style.transform = `translate(-50%, -50%) rotate(${o.degrees}deg)`;
+    } else {
+      const x = "x" in o ? o.x : 0;
+      const y = "y" in o ? o.y : 0;
+      const w = "w" in o ? o.w : ("width" in o ? o.width : srcW);
+      const h = "h" in o ? o.h : ("height" in o && o.height > 0 ? o.height : srcH);
+      const tl = toDisp(x, y), br = toDisp(x + w, y + h);
+      body.style.left = tl.x + "px"; body.style.top = tl.y + "px";
+      body.style.width = (br.x - tl.x) + "px"; body.style.height = (br.y - tl.y) + "px";
+      body.style.transform = "none";
+    }
+    updateReadout();
+  }
+  function updateReadout() {
+    const o = read();
+    if (cfg.kind === "rotate") {
+      readout.textContent = `Angle: ${Math.round(o.degrees)}°`;
+    } else {
+      const w = "w" in o ? o.w : o.width;
+      let h = "h" in o ? o.h : o.height;
+      // For Resize, height=0 means "auto" — show the aspect-locked value
+      // so the user knows what the actual output height will be.
+      if (cfg.kind === "resize" && (!h || h <= 0) && w > 0) {
+        h = Math.max(8, Math.round(w * (srcH / srcW)));
+      }
+      const x = "x" in o ? o.x : 0;
+      const y = "y" in o ? o.y : 0;
+      readout.textContent = `${w} × ${h} px  ·  starts at (${x}, ${y})`;
+    }
+  }
+  function aspectRatio(p) {
+    const m = /^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/.exec(p);
+    if (!m) return null;
+    return Number(m[1]) / Number(m[2]);
+  }
+  function applyPreset(value) {
+    const o = read();
+    if (cfg.kind === "resize") {
+      if (value === "original") { o.width = srcW; o.height = 0; }
+      else if (value === "custom") { /* leave as-is */ }
+      else if (value === "1080p") { o.width = 1080; o.height = 1920; }
+      else {
+        const w = Number(value);
+        if (Number.isFinite(w) && w > 0) {
+          o.width = w;
+          o.height = aspectLock ? Math.max(8, Math.round(w * (srcH / srcW))) : 0;
+        }
+      }
+    } else if (cfg.kind === "crop") {
+      if (value !== "free") {
+        const ar = aspectRatio(value);
+        if (ar) {
+          let cw = srcW, ch = srcH;
+          if (cw / ch > ar) cw = ch * ar; else ch = cw / ar;
+          cw = Math.floor(cw / 2) * 2; ch = Math.floor(ch / 2) * 2;
+          o.w = cw; o.h = ch;
+          o.x = Math.floor((srcW - cw) / 2);
+          o.y = Math.floor((srcH - ch) / 2);
+        }
+      }
+    } else if (cfg.kind === "rotate") {
+      const v = Number(value);
+      if (Number.isFinite(v)) o.degrees = v;
+    }
+    write(o);
+  }
+  presetSel.addEventListener("change", () => applyPreset(presetSel.value));
+  resetBtn.addEventListener("click", () => {
+    if (cfg.kind === "rotate") { write({ degrees: 0 }); presetSel.value = "0"; }
+    else if (cfg.kind === "resize") { write({ width: srcW, height: 0 }); presetSel.value = "original"; }
+    else { write({ x: 0, y: 0, w: srcW, h: srcH }); presetSel.value = "free"; }
+  });
+  applyPreset(presetSel.value || cfg.defaultPreset);
+
+  // ---- drag ----
+  // Build a complete state object for the current tool, filling in any
+  // implicit fields with sensible defaults. For Resize the form only
+  // stores width/height, but the crop "region" is implicitly the whole
+  // image (x=0, y=0). For Crop the form has all four, and for Rotate
+  // only degrees. This helper makes moveDrag + syncBox work uniformly.
+  function fullState() {
+    const o = read();
+    if (cfg.kind === "resize") {
+      if (!("x" in o)) o.x = 0;
+      if (!("y" in o)) o.y = 0;
+      if (!(o.width  > 0)) o.width  = srcW;
+      if (!(o.height > 0)) o.height = srcH; // 0 means "auto" -> use srcH for display
+    } else if (cfg.kind === "crop") {
+      if (!("x" in o)) o.x = 0;
+      if (!("y" in o)) o.y = 0;
+      if (!(o.w > 0)) o.w = srcW;
+      if (!(o.h > 0)) o.h = srcH;
+    }
+    return o;
+  }
+  let drag = null;
+  function pointerXY(e) {
+    const t = e.touches ? e.touches[0] : e;
+    const rect = overlay.getBoundingClientRect();
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  }
+  function startDrag(mode, e) {
+    e.preventDefault(); e.stopPropagation();
+    drag = { mode, start: fullState(), startPt: pointerXY(e) };
+  }
+  function moveDrag(e) {
+    if (!drag) return;
+    e.preventDefault();
+    const pt = pointerXY(e);
+    const dx = pt.x - drag.startPt.x;
+    const dy = pt.y - drag.startPt.y;
+    const o = { ...drag.start };
+    if (cfg.kind === "rotate") {
+      const cx = renderW / 2, cy = renderH / 2;
+      const a0 = Math.atan2(drag.startPt.y - cy, drag.startPt.x - cx);
+      const a1 = Math.atan2(pt.y - cy, pt.x - cx);
+      let deg = drag.start.degrees + ((a1 - a0) * 180) / Math.PI;
+      const norm = ((deg % 360) + 360) % 360;
+      const snap = [0, 90, 180, 270].find((s) => Math.abs(norm - s) < 4);
+      if (snap != null) deg = snap;
+      o.degrees = ((deg % 360) + 360) % 360;
+    } else if (drag.mode === "move") {
+      o.x = drag.start.x + (dx / renderW) * srcW;
+      o.y = drag.start.y + (dy / renderH) * srcH;
+    } else {
+      const h = drag.mode;
+      const startW = "w" in drag.start ? drag.start.w : drag.start.width;
+      const startH = "h" in drag.start ? drag.start.h : drag.start.height;
+      const startX = drag.start.x, startY = drag.start.y;
+      const sdx = (dx / renderW) * srcW;
+      const sdy = (dy / renderH) * srcH;
+      let nx = startX, ny = startY, nw = startW, nh = startH;
+      if (h.includes("w")) { nx = startX + sdx; nw = startW - sdx; }
+      if (h.includes("e")) { nw = startW + sdx; }
+      if (h.includes("n")) { ny = startY + sdy; nh = startH - sdy; }
+      if (h.includes("s")) { nh = startH + sdy; }
+      if (aspectLock) {
+        const ar = startW / startH;
+        if (Math.abs(sdx) > Math.abs(sdy)) nh = nw / ar;
+        else nw = nh * ar;
+        if (h.includes("w")) nx = startX + (startW - nw);
+        if (h.includes("n")) ny = startY + (startH - nh);
+      }
+      if (nw < 16) { nw = 16; if (aspectLock) nh = nw / ar; }
+      if (nh < 16) { nh = 16; if (aspectLock) nw = nh * ar; }
+      if ("w" in o) { o.w = nw; o.h = nh; o.x = nx; o.y = ny; }
+      else {
+        // Resize: the output is always the full source image (no crop),
+        // so the box is anchored at (0, 0). Only width/height change.
+        o.width = nw;
+        // Always write the computed height so the visual box reflects
+        // the new dimensions. The server treats height>0 the same as
+        // height=0 (auto) — ffmpeg's "-1" is equivalent to the explicit
+        // value. This makes the N/S handles visibly change the box
+        // height in the editor, not just the width.
+        o.height = nh;
+        o.x = 0; o.y = 0;
+      }
+    }
+    write(o);
+  }
+  body.addEventListener("pointerdown", (e) => {
+    if (rotHandle && e.target === rotHandle) startDrag("rot", e);
+    else if (e.target.classList.contains("vjs-handle")) startDrag(e.target.dataset.handle, e);
+    // For Resize, clicking inside the box (not on a handle) does nothing:
+    // the box represents the *output viewport* over the source, which is
+    // always anchored at (0, 0) in source coordinates. Only the handles
+    // change the output size.
+    else if (cfg.kind !== "resize") startDrag("move", e);
+    try { body.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  body.addEventListener("pointermove", moveDrag);
+  body.addEventListener("pointerup", () => { drag = null; });
+  body.addEventListener("pointercancel", () => { drag = null; });
+  body.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+
+  fit();
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(fit);
+    ro.observe(frame);
+  }
+  window.addEventListener("resize", fit);
+}
+
+/* ------------------------------------------------------------------ */
+/* Visual editor — "trim" kind: a playable <video> with a draggable   */
+/* in/out timeline (slide / touch / type) for trimming a clip.       */
+/* ------------------------------------------------------------------ */
+function vjsFmtTime(s) {
+  if (!Number.isFinite(s)) return "0:00.0";
+  const m = Math.floor(s / 60);
+  const sec = s - m * 60;
+  return `${m}:${sec.toFixed(1).padStart(4, "0")}`;
+}
+function mountTrimEditor(slot, videoEl, srcW, srcH, cfg) {
+  // Trim is video-only: a playable <video> + a draggable in/out timeline.
+  if (!videoEl) {
+    slot.replaceChildren(
+      el("p", { class: "small", text: "⚠ Trim plays a video file — add one above to set in/out points." }),
+    );
+    return;
+  }
+  // Let audio through while trimming (playback always starts on a click).
+  videoEl.muted = false;
+  videoEl.pause();
+
+  const form = $("#toolForm");
+  const startInput = form && form.querySelector("[name=start]");
+  const endInput = form && form.querySelector("[name=end]");
+
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+  // Wait until a real duration is known before laying the timeline out.
+  const ready =
+    videoEl.duration && isFinite(videoEl.duration) && videoEl.duration > 0
+      ? Promise.resolve()
+      : new Promise((res) => videoEl.addEventListener("loadedmetadata", res, { once: true }));
+
+  return ready.then(() => {
+    const raw = videoEl.duration;
+    const dur = (isFinite(raw) && raw > 0) ? raw : 0;
+    if (!dur) {
+      slot.replaceChildren(
+        el("p", { class: "small", text: "⚠ Could not read the video duration." }),
+      );
+      return;
+    }
+
+    // --- read the initial in/out from the form (or sensible defaults) ---
+    let start = clamp(Number(startInput && startInput.value) || 0, 0, dur);
+    let end = clamp(Number(endInput && endInput.value) || dur, 0, dur);
+    if (end <= start) end = dur; // degenerate guard
+
+    // --- build the player ---
+    slot.replaceChildren();
+
+    const player = el("div", { class: "vjs-trim-player" });
+    const vidWrap = el("div", { class: "vjs-trim-video" });
+    vidWrap.appendChild(videoEl); // move the loaded <video> into the player
+    player.appendChild(vidWrap);
+
+    const controls = el("div", { class: "vjs-trim-controls" });
+    const playBtn = el("button", { type: "button", class: "vjs-play-btn", title: "Play / Pause", text: "▶" });
+    const loopBtn = el("button", { type: "button", class: "vjs-loop-btn", title: "Loop the trimming region", text: "⏏" });
+    const timeEl = el("span", { class: "vjs-time", text: vjsFmtTime(0) + " / " + vjsFmtTime(dur) });
+    controls.append(playBtn, loopBtn, timeEl);
+    player.appendChild(controls);
+
+    const timeline = el("div", { class: "vjs-trim-timeline" });
+    const track = el("div", { class: "vjs-trim-track", "aria-label": "Drag the in/out handles to trim" });
+    const fill = el("div", { class: "vjs-trim-fill" });
+    const playhead = el("div", { class: "vjs-trim-playhead" });
+    const inHandle = el("div", { class: "vjs-trim-handle vjs-trim-in", "data-handle": "start", title: "Start — drag to move" });
+    const outHandle = el("div", { class: "vjs-trim-handle vjs-trim-out", "data-handle": "end", title: "End — drag to move" });
+    track.append(fill, playhead, inHandle, outHandle);
+    timeline.appendChild(track);
+    player.appendChild(timeline);
+
+    // In / Out / Length readouts (kept in sync live as you drag).
+    const inVal = el("span", { class: "vjs-trim-val", text: vjsFmtTime(start) });
+    const outVal = el("span", { class: "vjs-trim-val", text: vjsFmtTime(end) });
+    const lenVal = el("span", { class: "vjs-trim-val", text: vjsFmtTime(end - start) });
+    const summary = el("div", { class: "vjs-trim-summary" }, [
+      el("span", { class: "vjs-trim-label", text: "In" }), inVal,
+      el("span", { class: "vjs-trim-sep" }),
+      el("span", { class: "vjs-trim-label", text: "Out" }), outVal,
+      el("span", { class: "vjs-trim-sep" }),
+      el("span", { class: "vjs-trim-label", text: "Len" }), lenVal,
+    ]);
+    player.appendChild(summary);
+    slot.appendChild(player);
+
+    // --- state + helpers ---
+    let playing = false;
+    let loop = false;
+    let drag = null;
+    const pct = (t) => (dur ? (t / dur) * 100 : 0);
+
+    function syncVisual() {
+      const ps = pct(start) || 0;
+      const pe = pct(end) || 0;
+      inHandle.style.left = ps + "%";
+      outHandle.style.left = pe + "%";
+      fill.style.left = ps + "%";
+      fill.style.width = Math.max(0, pe - ps) + "%";
+      inVal.textContent = vjsFmtTime(start);
+      outVal.textContent = vjsFmtTime(end);
+      lenVal.textContent = vjsFmtTime(end - start);
+    }
+    function writeForm() {
+      writeEditorOutputs({ start: +start.toFixed(3), end: +end.toFixed(3) });
+    }
+    function setTimes(ns, ne) {
+      start = clamp(ns, 0, dur);
+      end = clamp(ne, 0, dur);
+      if (start > end) start = end; // keep the in-point before the out-point
+      syncVisual();
+      writeForm();
+    }
+    syncVisual();
+    writeForm();
+
+    // --- playback ---
+    playBtn.addEventListener("click", () => {
+      if (videoEl.paused) videoEl.play().catch(() => {});
+      else videoEl.pause();
+    });
+    function onPlay() { playBtn.textContent = "⏸"; playing = true; }
+    function onPause() { playBtn.textContent = "▶"; playing = false; }
+    videoEl.addEventListener("play", onPlay);
+    videoEl.addEventListener("playing", onPlay);
+    videoEl.addEventListener("pause", onPause);
+    videoEl.addEventListener("ended", onPause);
+
+    loopBtn.addEventListener("click", () => {
+      loop = !loop;
+      loopBtn.classList.toggle("is-on", loop);
+      loopBtn.textContent = loop ? "↻ Loop on" : "⏏";
+    });
+
+    videoEl.addEventListener("timeupdate", () => {
+      timeEl.textContent = vjsFmtTime(videoEl.currentTime) + " / " + vjsFmtTime(dur);
+      playhead.style.left = pct(videoEl.currentTime) + "%";
+      // Don't preview past the out-point — that's the boundary the user is trimming to.
+      if (playing && end < dur && videoEl.currentTime >= end) {
+        if (loop) videoEl.currentTime = start;
+        else videoEl.pause();
+      }
+    });
+    videoEl.addEventListener("seeked", () => {
+      playhead.style.left = pct(videoEl.currentTime) + "%";
+      timeEl.textContent = vjsFmtTime(videoEl.currentTime) + " / " + vjsFmtTime(dur);
+    });
+
+    // --- timeline: click to seek, drag handles to set in/out ---
+    track.addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".vjs-trim-handle")) return; // the handle owns this gesture
+      e.preventDefault();
+      const rect = track.getBoundingClientRect();
+      const t = clamp(((e.clientX - rect.left) / rect.width) * dur, 0, dur);
+      videoEl.currentTime = t;
+    });
+
+    function handleDown(e) {
+      const h = e.target.closest(".vjs-trim-handle");
+      if (!h) return;
+      e.preventDefault();
+      const rect = track.getBoundingClientRect();
+      drag = { handle: h.dataset.handle, startRect: rect };
+      track.setPointerCapture(e.pointerId);
+    }
+    function handleMove(e) {
+      if (!drag) return;
+      e.preventDefault();
+      const t = clamp(((e.clientX - drag.startRect.left) / drag.startRect.width) * dur, 0, dur);
+      if (drag.handle === "start") start = clamp(t, 0, end);
+      else end = clamp(t, start, dur);
+      syncVisual();
+      // Scrub the preview to the boundary being dragged so the cut frame is visible.
+      videoEl.currentTime = drag.handle === "start" ? start : end;
+    }
+    function handleUp() {
+      if (!drag) return;
+      drag = null;
+      writeForm();
+    }
+    inHandle.addEventListener("pointerdown", handleDown);
+    outHandle.addEventListener("pointerdown", handleDown);
+    track.addEventListener("pointermove", handleMove);
+    track.addEventListener("pointerup", handleUp);
+    track.addEventListener("pointercancel", () => { drag = null; });
+
+    // --- the number inputs below the editor: type exact times ---
+    function onInputsChanged() {
+      const ns = clamp(Number(startInput && startInput.value) || 0, 0, dur);
+      const ne = clamp(Number(endInput && endInput.value) || dur, 0, dur);
+      setTimes(ns, ne);
+    }
+    if (startInput) startInput.addEventListener("change", onInputsChanged);
+    if (endInput) endInput.addEventListener("change", onInputsChanged);
+
+    // Preview begins at the in-point.
+    try { videoEl.currentTime = start; } catch (_) {}
+    playhead.style.left = pct(start) + "%";
+  });
+}
+
+function wireVisualEditor() {
+  const editor = findEditorField();
+  if (!editor) return;
+  // Mark the page so CSS can switch the layout to a wider, single-column
+  // arrangement (form + editor on top, result below).
+  const layout = document.querySelector(".tool-layout");
+  if (layout) layout.classList.add("editor-mode");
+  document.body.classList.add("has-editor");
+
+  const primary =
+    (toolMeta.inputs || []).find((i) => !i.multiple) || (toolMeta.inputs || [])[0];
+  if (!primary) return;
+  const prev = uploadRefreshers[primary.name];
+  uploadRefreshers[primary.name] = () => {
+    if (prev) prev();
+    setTimeout(mountVisualEditor, 0);
+  };
+  setTimeout(mountVisualEditor, 0);
+}
 /* ------------------------------------------------------------------ */
 /* Upload engine — every tool gets drag & drop                        */
 /*                                                                    */
@@ -473,6 +1329,8 @@ async function renderTool() {
   // Single-upload tools prepare the multi-output ("batch") panel up front.
   if (uploadMode()) setupResultPanel();
   $("#toolFields").replaceChildren(...(toolMeta.fields || []).map(buildField));
+  wireFieldVisibility();
+  wireVisualEditor();
 
   $("#toolHint").innerHTML =
     "All processing runs <b>locally</b> — your files never leave this machine.";
@@ -711,22 +1569,119 @@ function showResult(blob, filename) {
   lastBlobUrl = URL.createObjectURL(blob);
   const media = $("#resultMedia");
   const actions = $("#resultActions");
+  const drop = $("#resultDrop");
+  if (drop) drop.style.display = "none";
   media.replaceChildren();
+  actions.replaceChildren();
 
   const ext = (filename.split(".").pop() || "").toLowerCase();
+  const size = fmtBytes(blob.size);
+
+  // Filename + size header (always shown so the user can confirm what
+  // they're about to download — Replace-Audio and Merge tools need this).
+  const head = el("div", { class: "results-summary" }, [
+    el("span", { text: filename, title: filename }),
+    el("span", { class: "muted-dim", text: ` · ${size}` }),
+  ]);
+  media.appendChild(head);
+
+  // Inline preview — same .r-preview styling as the batch result rows
+  // so audio/video/gif outputs scrub right above the download button.
   if (isVideoExt(ext)) {
     media.appendChild(
-      el("video", { controls: "", src: lastBlobUrl, class: "result-media" }),
+      el("div", { class: "r-preview-wrap" }, [
+        el("video", {
+          class: "r-preview",
+          controls: "",
+          preload: "metadata",
+          src: lastBlobUrl,
+          playsinline: "",
+        }),
+        el("button", {
+          type: "button",
+          class: "r-preview-toggle",
+          title: "Hide preview",
+          text: "✕",
+          onclick: (e) => {
+            const wrap = e.currentTarget.parentElement;
+            wrap.hidden = true;
+            const showBtn = wrap.parentElement.querySelector(".r-preview-show");
+            if (showBtn) showBtn.hidden = false;
+          },
+        }),
+      ]),
     );
   } else if (isAudioExt(ext)) {
     media.appendChild(
-      el("audio", { controls: "", src: lastBlobUrl, class: "result-media" }),
+      el("div", { class: "r-preview-wrap" }, [
+        el("audio", {
+          class: "r-preview",
+          controls: "",
+          preload: "metadata",
+          src: lastBlobUrl,
+        }),
+        el("button", {
+          type: "button",
+          class: "r-preview-toggle",
+          title: "Hide preview",
+          text: "✕",
+          onclick: (e) => {
+            const wrap = e.currentTarget.parentElement;
+            wrap.hidden = true;
+            const showBtn = wrap.parentElement.querySelector(".r-preview-show");
+            if (showBtn) showBtn.hidden = false;
+          },
+        }),
+      ]),
     );
   } else if (ext === "gif") {
-    media.appendChild(el("img", { src: lastBlobUrl, class: "result-media", alt: "result" }));
+    media.appendChild(
+      el("div", { class: "r-preview-wrap" }, [
+        el("img", {
+          class: "r-preview",
+          src: lastBlobUrl,
+          alt: filename,
+          loading: "lazy",
+        }),
+        el("button", {
+          type: "button",
+          class: "r-preview-toggle",
+          title: "Hide preview",
+          text: "✕",
+          onclick: (e) => {
+            const wrap = e.currentTarget.parentElement;
+            wrap.hidden = true;
+            const showBtn = wrap.parentElement.querySelector(".r-preview-show");
+            if (showBtn) showBtn.hidden = false;
+          },
+        }),
+      ]),
+    );
   }
 
-  actions.replaceChildren(
+  // "Show preview" pill that appears after the user hides the player.
+  if (isPlayableExt(ext)) {
+    media.appendChild(
+      el("button", {
+        type: "button",
+        class: "r-preview-show btn btn-sm",
+        hidden: "",
+        text: "▶ Show preview",
+        onclick: (e) => {
+          const wrap = e.currentTarget.parentElement.querySelector(".r-preview-wrap");
+          if (wrap) {
+            wrap.hidden = false;
+            const m = wrap.querySelector("video, audio");
+            if (m) m.load?.();
+          }
+          e.currentTarget.hidden = true;
+        },
+      }),
+    );
+  }
+
+  // Actions: Download + Clear.
+  actions.appendChild(
     el("a", {
       class: "btn btn-primary",
       href: lastBlobUrl,
@@ -734,8 +1689,35 @@ function showResult(blob, filename) {
       text: "⬇️ Download",
     }),
   );
+  actions.appendChild(
+    el("button", {
+      type: "button",
+      class: "btn btn-sm",
+      onclick: clearSingleResult,
+      text: "🧹 Clear result",
+    }),
+  );
+
   setProgress(100);
   setStatus("Done ✔ — ready to download.", false);
+}
+
+/** Reset the single-output result panel back to its empty state. */
+function clearSingleResult() {
+  if (lastBlobUrl) {
+    URL.revokeObjectURL(lastBlobUrl);
+    lastBlobUrl = "";
+  }
+  const media = $("#resultMedia");
+  const actions = $("#resultActions");
+  const drop = $("#resultDrop");
+  if (media) media.replaceChildren();
+  if (actions) actions.replaceChildren();
+  if (drop) drop.style.display = "";
+  const bar = $("#progressWrap");
+  if (bar) bar.hidden = true;
+  setStatus("");
+  setProgress(0);
 }
 
 /* ------------------------------------------------------------------ */
@@ -849,17 +1831,44 @@ function renderResults() {
       class: "results-summary",
       text: `${items.length} output${items.length > 1 ? "s" : ""} · ${fmtBytes(totalBytes)} total`,
     }),
-    ...items.map((r) =>
-      el("div", { class: "r-row" }, [
+    ...items.map((r) => {
+      const rExt = (r.name.split(".").pop() || "").toLowerCase();
+      const canPreview = r.url && isPlayableExt(rExt);
+      // Inline media preview (audio / video / gif) — placed *above* the
+      // download button so the user can scrub/listen before saving.
+      const preview = canPreview
+        ? isVideoExt(rExt)
+          ? el("video", {
+              class: "r-preview",
+              controls: "",
+              preload: "metadata",
+              src: r.url,
+              playsinline: "",
+            })
+          : rExt === "gif"
+            ? el("img", {
+                class: "r-preview",
+                src: r.url,
+                alt: r.name,
+                loading: "lazy",
+              })
+            : el("audio", {
+                class: "r-preview",
+                controls: "",
+                preload: "metadata",
+                src: r.url,
+              })
+        : null;
+      return el("div", { class: "r-row" }, [
         el("span", { class: "f-icon", text: oIcon }),
         el("div", { class: "f-meta" }, [
-          (r.url && isPlayableExt((r.name.split(".").pop() || "").toLowerCase())
+          (canPreview
             ? el("a", {
                 class: "f-name link-like",
                 href: r.url,
                 target: "_blank",
                 rel: "noopener",
-                title: `Preview ${r.name}`,
+                title: `Open ${r.name} in a new tab`,
                 text: r.name,
               })
             : el("div", { class: "f-name", title: r.name, text: r.name })),
@@ -871,8 +1880,46 @@ function renderResults() {
           download: r.name,
           text: "⬇️ Download",
         }),
-      ]),
-    ),
+        // Preview sits below the row's name + download — it expands the
+        // row to full width so the player doesn't get squashed.
+        ...(preview
+          ? [
+              el("div", { class: "r-preview-wrap" }, [
+                preview,
+                el("button", {
+                  type: "button",
+                  class: "r-preview-toggle",
+                  title: "Hide preview",
+                  text: "✕",
+                  onclick: (e) => {
+                    const wrap = e.currentTarget.parentElement;
+                    const row = wrap.parentElement;
+                    wrap.hidden = true;
+                    const btn = row.querySelector(".r-preview-show");
+                    if (btn) btn.hidden = false;
+                  },
+                }),
+              ]),
+              el("button", {
+                type: "button",
+                class: "r-preview-show btn btn-sm",
+                hidden: "",
+                text: "▶ Show preview",
+                onclick: (e) => {
+                  const row = e.currentTarget.parentElement;
+                  const wrap = row.querySelector(".r-preview-wrap");
+                  if (wrap) {
+                    wrap.hidden = false;
+                    const media = wrap.querySelector("video, audio");
+                    if (media) media.load?.();
+                  }
+                  e.currentTarget.hidden = true;
+                },
+              }),
+            ]
+          : []),
+      ]);
+    }),
   );
 
   actions.replaceChildren(
