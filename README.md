@@ -55,9 +55,9 @@ Also built in:
 
 The portal at `/tools/index.html` groups all tools into **Audio**, **Video** and **GIF**
 cards. Clicking a tool opens the same generic `tool.html` page, whose form is generated
-from that tool's registry entry. Pick your file(s), tweak the options, hit run — FFmpeg
-does the work server-side and the result appears in a preview panel with a download
-button.
+from that tool's registry entry. **Drag & drop** files straight into any tool (or click to
+browse), tweak the options, hit run — FFmpeg does the work server-side and the result appears
+in a preview panel with download buttons.
 
 How jobs are handled:
 
@@ -72,9 +72,9 @@ How jobs are handled:
 
 | Tool | What it can do | Key options |
 |---|---|---|
-| **Audio Converter** | Convert between MP3, WAV, OGG, FLAC, M4A, AAC, OPUS and more | Output format; bitrate *Auto* (mirrors source) or 96–320 kbps |
+| **Audio Converter** | Convert between MP3, WAV, OGG, FLAC, M4A, AAC, OPUS and more | Output format; bitrate *Auto* (mirrors source) or 96–320 kbps · drag-&-drop many files at once — download individually or as a single ZIP |
 | **Add Cover Art / MP4** | Embed album art into an MP3, or combine audio + image into an MP4 "music video" | MP3-cover or MP4 mode; output width/height |
-| **Audio Compressor** | Shrink file size to a fraction of the **source** bitrate — never bigger | light / balanced / strong / extreme · keep/auto format · mono downmix |
+| **Audio Compressor** | Shrink file size to a fraction of the **source** bitrate — never bigger | Compress by *preset level* (light/balanced/strong/extreme), *percentage of original*, or a *target size (KB/MB)* · keep/auto format · mono downmix |
 | **Audio Transition (Fade)** | Smooth fade-in / fade-out transitions, auto-timed to track length | Fade-in & fade-out seconds |
 | **Merge Audio (Concatenate)** | Join multiple files end-to-end into one track | Multi-select, plays in the chosen order |
 | **Change Audio Speed** | Speed up or slow down audio **without changing pitch** | 0.25× – 4× speed |
