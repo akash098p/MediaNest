@@ -1,6 +1,7 @@
 "use strict";
 
 const path = require("path");
+const fs = require("fs");
 
 /** Return ffmpeg "-i <path>" flags for one or more inputs. */
 const I = (p) => ["-i", p];
@@ -347,12 +348,55 @@ tools.push({
   icon: "icons/audio compressor.png",
   description: "Shrink any audio file — targets a fraction of the source bitrate so output is always smaller.",
   inputs: [{ name: "audio", label: "Audio file (any format)", accept: "audio/*,video/*" }],
+  needDuration: true,
   fields: [
+    {
+      name: "mode",
+      label: "Compression mode",
+      type: "select",
+      options: [
+        { value: "preset", text: "Preset level" },
+        { value: "percent", text: "Percentage of original" },
+        { value: "size", text: "Target size (KB / MB)" },
+      ],
+      default: "preset",
+    },
     {
       name: "level",
       label: "Compression level",
       type: "select",
       options: ["light", "balanced", "strong", "extreme"],
+      dependsOn: { field: "mode", value: "preset" },
+    },
+    {
+      name: "percent",
+      label: "Compress to (% of original size)",
+      type: "number",
+      default: 50,
+      min: 5,
+      max: 95,
+      step: 5,
+      dependsOn: { field: "mode", value: "percent" },
+      note: "Output is kept at roughly this percentage of the original file size.",
+    },
+    {
+      name: "sizeValue",
+      label: "Target file size",
+      type: "number",
+      default: 2,
+      min: 1,
+      max: 512,
+      step: 1,
+      dependsOn: { field: "mode", value: "size" },
+      note: "The output is sized toward this target; it never grows larger than the original.",
+    },
+    {
+      name: "sizeUnit",
+      label: "Size unit",
+      type: "select",
+      options: ["KB", "MB"],
+      default: "MB",
+      dependsOn: { field: "mode", value: "size" },
     },
     {
       name: "format",
@@ -370,7 +414,7 @@ tools.push({
   defaultExt: "mp3",
   build(ctx) {
     const audio = ctx.file("audio");
-    const level = ctx.param("level") || "balanced";
+    const mode = ctx.param("mode") || "preset";
     const fmtSel = ctx.param("format") || "auto";
     const mono = (ctx.param("channels") || "keep") === "mono";
 
@@ -385,12 +429,10 @@ tools.push({
         : fmtSel;
     const codec = AUDIO_CODEC[ext] || "libmp3lame";
 
-    // Bitrate = fraction of the SOURCE bitrate -> guaranteed smaller output.
-    const factors = { light: 0.8, balanced: 0.55, strong: 0.35, extreme: 0.22 };
-    const factor = factors[level] ?? 0.55;
     const srcKbps = Math.round(
       ((ctx.media?.audioBitrate || ctx.media?.totalBitrate || 0) / 1000),
     );
+    const duration = ctx.duration || ctx.media?.duration || 0;
 
     const caps = {
       mp3: [32, 320],
@@ -401,9 +443,34 @@ tools.push({
       wma: [32, 192],
     };
     const [minK, maxK] = caps[ext] || [32, 320];
+    const factors = { light: 0.8, balanced: 0.55, strong: 0.35, extreme: 0.22 };
     const fallbacks = { light: 160, balanced: 128, strong: 96, extreme: 64 };
+    const level = ctx.param("level") || "balanced";
 
-    let kbps = srcKbps > 0 ? Math.round(srcKbps * factor) : fallbacks[level] ?? 128;
+    // ----- Pick a target bitrate according to the chosen mode -----
+    let kbps;
+    if (mode === "size") {
+      // Convert the requested KB/MB target into a matching audio bitrate
+      // from the file's duration:  size = bitrate * seconds / 8
+      const unit = String(ctx.param("sizeUnit") || "MB").toUpperCase();
+      const val = Math.max(0, Number(ctx.param("sizeValue")) || 0);
+      const bytes = unit === "KB" ? val * 1024 : val * 1024 * 1024;
+      if (bytes > 0 && duration > 0) {
+        kbps = (bytes * 8) / (duration * 1000);
+      } else {
+        kbps = srcKbps > 0 ? srcKbps * factors[level] : fallbacks[level];
+      }
+    } else if (mode === "percent") {
+      // Output stays ~X% of the source size: bitrate scales with the %.
+      const pct = Math.max(2, Math.min(100, Number(ctx.param("percent")) || 50));
+      kbps = srcKbps > 0 ? (srcKbps * pct) / 100 : fallbacks[level];
+    } else {
+      // Preset level — bitrate = fraction of the SOURCE bitrate, so the
+      // output is always smaller than the original.
+      kbps = srcKbps > 0 ? Math.round(srcKbps * factors[level]) : fallbacks[level];
+    }
+
+    kbps = Math.round(kbps);
     if (srcKbps > 0) kbps = Math.min(kbps, srcKbps); // never bigger than source
     kbps = Math.max(minK, Math.min(maxK, kbps));
 
@@ -517,12 +584,55 @@ tools.push({
   icon: "icons/video compressor.png",
   description: "Reduce video file size — targets a fraction of the source bitrate so output is always smaller.",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  needDuration: true,
   fields: [
+    {
+      name: "mode",
+      label: "Compression mode",
+      type: "select",
+      options: [
+        { value: "preset", text: "Preset level" },
+        { value: "percent", text: "Percentage of original" },
+        { value: "size", text: "Target size (KB / MB)" },
+      ],
+      default: "preset",
+    },
     {
       name: "level",
       label: "Compression level",
       type: "select",
-      options: ["light", "balanced", "strong"],
+      options: ["light", "balanced", "strong", "extreme"],
+      dependsOn: { field: "mode", value: "preset" },
+    },
+    {
+      name: "percent",
+      label: "Compress to (% of original size)",
+      type: "number",
+      default: 50,
+      min: 10,
+      max: 95,
+      step: 5,
+      dependsOn: { field: "mode", value: "percent" },
+      note: "Output video bitrate is kept at roughly this percentage of the original.",
+    },
+    {
+      name: "sizeValue",
+      label: "Target file size",
+      type: "number",
+      default: 20,
+      min: 1,
+      max: 512,
+      step: 1,
+      dependsOn: { field: "mode", value: "size" },
+      note: "Video bitrate is computed from the clip's duration to land near this target.",
+    },
+    {
+      name: "sizeUnit",
+      label: "Size unit",
+      type: "select",
+      options: ["KB", "MB"],
+      default: "MB",
+      dependsOn: { field: "mode", value: "size" },
     },
     { name: "scale", label: "Scale width (0 = keep original)", type: "number", default: 0, min: 0, step: 2 },
     { name: "format", label: "Container", type: "select", options: ["mp4", "webm"] },
@@ -530,14 +640,44 @@ tools.push({
   defaultExt: "mp4",
   build(ctx) {
     const video = ctx.file("video");
-    const level = ctx.param("level") || "balanced";
-    const factor =
-      level === "light" ? 0.8 : level === "strong" ? 0.35 : 0.55;
-    // Target = fraction of the SOURCE bitrate → size can only go down.
-    const vk = Math.max(80, Math.round(sourceVideoKbps(ctx.media) * factor));
-    const ak = Math.min(160, Math.max(48, autoAudioBitrate(ctx.media, 128)));
+    const mode = ctx.param("mode") || "preset";
     const scale = Number(ctx.param("scale") || 0);
     const fmt = ctx.param("format") || "mp4";
+    const duration = ctx.duration || ctx.media?.duration || 0;
+
+    const srcVk = sourceVideoKbps(ctx.media);
+    const srcAk = Math.min(160, Math.max(32, autoAudioBitrate(ctx.media, 128)));
+    const level = ctx.param("level") || "balanced";
+    const factor =
+      level === "light" ? 0.8 : level === "extreme" ? 0.22 : level === "strong" ? 0.35 : 0.55;
+
+    // ----- Pick video+audio bitrates according to the chosen mode -----
+    let vk;
+    let ak = srcAk;
+    if (mode === "size") {
+      // Budget = target bytes over the clip's duration; audio takes a share,
+      // the rest goes to video. Never larger than the source.
+      const unit = String(ctx.param("sizeUnit") || "MB").toUpperCase();
+      const val = Math.max(0, Number(ctx.param("sizeValue")) || 0);
+      const bytes = unit === "KB" ? val * 1024 : val * 1024 * 1024;
+      if (bytes > 0 && duration > 0) {
+        const totalK = Math.round((bytes * 8) / (duration * 1000));
+        ak = Math.min(srcAk, Math.round(totalK * 0.15), 128);
+        vk = Math.max(80, Math.round(totalK - ak));
+      } else {
+        vk = Math.round(srcVk * factor);
+      }
+    } else if (mode === "percent") {
+      // Output ~X% of the source size: both streams scale with the %.
+      const pct = Math.max(10, Math.min(100, Number(ctx.param("percent")) || 50));
+      vk = Math.round(srcVk * (pct / 100));
+      ak = Math.round(srcAk * (pct / 100));
+    } else {
+      // Preset level — fraction of the SOURCE bitrate, always smaller.
+      vk = Math.round(srcVk * factor);
+    }
+    vk = Math.max(80, Math.min(Math.round(vk), srcVk));
+    ak = Math.max(32, Math.min(Math.round(ak), srcAk));
 
     const args = [I(video)];
     if (scale > 0) args.push("-vf", `scale=${scale}:-2`);
@@ -575,14 +715,97 @@ tools.push({
   description: "Reduce GIF size by scaling it down and lowering the frame rate.",
   inputs: [{ name: "gif", label: "GIF image", accept: ".gif,image/gif" }],
   fields: [
+    {
+      name: "mode",
+      label: "Compression mode",
+      type: "select",
+      options: [
+        { value: "preset", text: "Preset level" },
+        { value: "percent", text: "Percentage of original" },
+        { value: "size", text: "Target size (KB / MB)" },
+      ],
+      default: "preset",
+    },
+    {
+      name: "level",
+      label: "Compression level",
+      type: "select",
+      options: ["light", "balanced", "strong", "extreme"],
+      dependsOn: { field: "mode", value: "preset" },
+    },
+    {
+      name: "percent",
+      label: "Compress to (% of original size)",
+      type: "number",
+      default: 50,
+      min: 10,
+      max: 95,
+      step: 5,
+      dependsOn: { field: "mode", value: "percent" },
+      note: "Approximate — GIF size tracks pixel area, so dimensions are scaled down.",
+    },
+    {
+      name: "sizeValue",
+      label: "Target file size",
+      type: "number",
+      default: 1,
+      min: 1,
+      max: 512,
+      step: 1,
+      dependsOn: { field: "mode", value: "size" },
+      note: "Approximate — dimensions are scaled to land near this size.",
+    },
+    {
+      name: "sizeUnit",
+      label: "Size unit",
+      type: "select",
+      options: ["KB", "MB"],
+      default: "MB",
+      dependsOn: { field: "mode", value: "size" },
+    },
     { name: "scale", label: "Scale width (0 = keep)", type: "number", default: 480, min: 0, step: 1 },
     { name: "fps", label: "Frame rate", type: "number", default: 10, min: 1, max: 30, step: 1 },
   ],
   defaultExt: "gif",
   build(ctx) {
     const gif = ctx.file("gif");
-    const scale = Number(ctx.param("scale") || 480);
-    const fps = Number(ctx.param("fps") || 10);
+    const mode = ctx.param("mode") || "preset";
+    const media = ctx.media || {};
+    const srcW = media.width || 0;
+
+    let scale = Number(ctx.param("scale") || 480);
+    let fps = Number(ctx.param("fps") || 10);
+
+    if (mode === "preset") {
+      // Levels combine a dimension + framerate cut for a simpler file.
+      const l = {
+        light: { s: 0.82, f: 0.72 },
+        balanced: { s: 0.62, f: 0.5 },
+        strong: { s: 0.45, f: 0.33 },
+        extreme: { s: 0.28, f: 0.22 },
+      }[ctx.param("level") || "balanced"] || { s: 0.62, f: 0.5 };
+      scale = Math.max(8, Math.round(scale * l.s));
+      fps = Math.max(1, Math.round(fps * l.f));
+    } else {
+      // target fraction of the original file to keep
+      let factor; // 0 < factor <= 1
+      if (mode === "percent") {
+        factor = Math.max(0.05, Math.min(1, (Number(ctx.param("percent")) || 50) / 100));
+      } else {
+        const unit = String(ctx.param("sizeUnit") || "MB").toUpperCase();
+        const val = Math.max(0, Number(ctx.param("sizeValue")) || 0);
+        const target = unit === "KB" ? val * 1024 : val * 1024 * 1024;
+        let srcBytes = 0;
+        try { srcBytes = fs.statSync(gif).size || 0; } catch (e) {}
+        factor = srcBytes > 0 ? Math.max(0.05, Math.min(1, target / srcBytes)) : 0.5;
+      }
+      // GIF size tracks pixel area; shrink dimensions by sqrt(factor).
+      const s = Math.sqrt(factor);
+      scale = srcW > 0
+        ? Math.max(8, Math.round(srcW * s))
+        : Math.max(8, Math.round(scale * s));
+    }
+
     const vf = [];
     if (fps > 0) vf.push(`fps=${fps}`);
     if (scale > 0) vf.push(`scale=${scale}:-1:flags=lanczos`);
@@ -618,32 +841,72 @@ tools.push({
 });
 
 tools.push({
-  id: "gif-resize-crop",
-  name: "GIF Resize & Crop",
+  id: "gif-resize",
+  name: "Resize GIF",
   group: "GIF",
   icon: "icons/gif resize and crop.png",
-  description: "Resize an animated GIF to a new width, or center-crop it to exact dimensions.",
+  description: "Resize an animated GIF to a new width and height (keeps aspect ratio unless you lock it).",
   inputs: [{ name: "gif", label: "GIF image", accept: ".gif,image/gif" }],
   fields: [
-    { name: "mode", label: "Mode", type: "select", options: ["resize", "crop"] },
-    { name: "width", label: "Width (px)", type: "number", default: 480, min: 8, step: 2 },
+    // 'editor' is a client-side hint: the frontend mounts a visual
+    // crop/resize/rotate canvas and writes back into the form fields
+    // named in 'emits'. The server only ever sees the plain numbers.
+    { name: "_editor", label: "Visual editor", type: "editor",
+      editor: { kind: "resize", emits: ["width", "height"], lockAspect: true,
+        presets: [
+          { value: "original", text: "Original (no resize)" },
+          { value: "320",      text: "Small · 320 px wide" },
+          { value: "480",      text: "Medium · 480 px wide" },
+          { value: "640",      text: "Large · 640 px wide" },
+          { value: "854",      text: "HD-ready · 854 px wide" },
+          { value: "custom",   text: "Custom…" },
+        ],
+        defaultPreset: "480" } },
+    { name: "width",  label: "Width (px)",  type: "number", default: 480, min: 8, step: 2 },
     { name: "height", label: "Height (px, 0 = auto)", type: "number", default: 0, min: 0, step: 2 },
   ],
   defaultExt: "gif",
   build(ctx) {
     const gif = ctx.file("gif");
     const w = Math.max(8, Number(ctx.param("width")) || 480);
-    const hRaw = Number(ctx.param("height")) || 0;
-    let vf;
-    if ((ctx.param("mode") || "resize") === "crop") {
-      // Crop needs an explicit height; fall back to a square when omitted.
-      const h = Math.max(8, hRaw > 0 ? hRaw : w);
-      // Scale up until the frame covers the box, then cut the excess evenly.
-      vf = `scale=${w}:${h}:force_original_aspect_ratio=increase:flags=lanczos,crop=${w}:${h}`;
-    } else {
-      vf = `scale=${w}:${hRaw > 0 ? hRaw : -1}:flags=lanczos`;
-    }
-    return { args: [I(gif), "-vf", vf], ext: "gif" };
+    const h = Number(ctx.param("height")) || 0;
+    return { args: [I(gif), "-vf", `scale=${w}:${h > 0 ? h : -1}:flags=lanczos`], ext: "gif" };
+  },
+});
+
+tools.push({
+  id: "gif-crop",
+  name: "Crop GIF",
+  group: "GIF",
+  icon: "icons/gif resize and crop.png",
+  description: "Crop a region out of an animated GIF — pick standard aspect ratios or draw a free box.",
+  inputs: [{ name: "gif", label: "GIF image", accept: ".gif,image/gif" }],
+  fields: [
+    { name: "_editor", label: "Visual editor", type: "editor",
+      editor: { kind: "crop", emits: ["x", "y", "w", "h"],
+        presets: [
+          { value: "free",     text: "Free crop (drag the box)" },
+          { value: "1:1",      text: "Square 1:1" },
+          { value: "4:3",      text: "Standard 4:3" },
+          { value: "16:9",     text: "Widescreen 16:9" },
+          { value: "9:16",     text: "Vertical 9:16 (story / reel)" },
+          { value: "3:2",      text: "Photo 3:2" },
+          { value: "21:9",     text: "Cinematic 21:9" },
+        ],
+        defaultPreset: "free" } },
+    { name: "w", label: "Crop width (px)",  type: "number", default: 320, min: 8 },
+    { name: "h", label: "Crop height (px)", type: "number", default: 320, min: 8 },
+    { name: "x", label: "Crop X (px)",      type: "number", default: 0,   min: 0 },
+    { name: "y", label: "Crop Y (px)",      type: "number", default: 0,   min: 0 },
+  ],
+  defaultExt: "gif",
+  build(ctx) {
+    const gif = ctx.file("gif");
+    const w = Math.max(8, Number(ctx.param("w")) || 320);
+    const h = Math.max(8, Number(ctx.param("h")) || 320);
+    const x = Math.max(0, Number(ctx.param("x")) || 0);
+    const y = Math.max(0, Number(ctx.param("y")) || 0);
+    return { args: [I(gif), "-vf", `crop=${w}:${h}:${x}:${y}`], ext: "gif" };
   },
 });
 
@@ -801,9 +1064,21 @@ tools.push({
   name: "Crop Video",
   group: "Video",
   icon: "icons/crop video.png",
-  description: "Crop a region out of a video.",
+  description: "Crop a region out of a video — drag the box, or pick a standard aspect ratio.",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
   fields: [
+    { name: "_editor", label: "Visual editor", type: "editor",
+      editor: { kind: "crop", emits: ["x", "y", "w", "h"],
+        presets: [
+          { value: "free", text: "Free crop (drag the box)" },
+          { value: "1:1",  text: "Square 1:1" },
+          { value: "4:3",  text: "Standard 4:3" },
+          { value: "16:9", text: "Widescreen 16:9" },
+          { value: "9:16", text: "Vertical 9:16 (story / reel)" },
+          { value: "3:2",  text: "Photo 3:2" },
+          { value: "21:9", text: "Cinematic 21:9" },
+        ],
+        defaultPreset: "free" } },
     { name: "w", label: "Crop width (px)", type: "number", default: 640, min: 16 },
     { name: "h", label: "Crop height (px)", type: "number", default: 360, min: 16 },
     { name: "x", label: "Crop X (px)", type: "number", default: 0, min: 0 },
@@ -825,18 +1100,32 @@ tools.push({
   name: "Resize Video",
   group: "Video",
   icon: "icons/resize video.png",
-  description: "Scale a video to new dimensions (keeps aspect ratio).",
+  description: "Scale a video to new dimensions — pick a preset, keep aspect, or go custom.",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
   fields: [
-    { name: "width", label: "Width (px)", type: "number", default: 1280, min: 16 },
-    { name: "height", label: "Height (px)", type: "number", default: 720, min: 16 },
+    { name: "_editor", label: "Visual editor", type: "editor",
+      editor: { kind: "resize", emits: ["width", "height"], lockAspect: true,
+        presets: [
+          { value: "original", text: "Original (no resize)" },
+          { value: "320",      text: "Small · 320 px wide" },
+          { value: "480",      text: "Medium · 480 px wide" },
+          { value: "640",      text: "Standard · 640 px wide" },
+          { value: "854",      text: "HD-ready · 854 px wide" },
+          { value: "1280",     text: "HD · 1280 × 720" },
+          { value: "1920",     text: "Full HD · 1920 × 1080" },
+          { value: "1080p",    text: "Portrait 1080 × 1920" },
+          { value: "custom",   text: "Custom…" },
+        ],
+        defaultPreset: "original" } },
+    { name: "width",  label: "Width (px)",  type: "number", default: 1280, min: 16 },
+    { name: "height", label: "Height (px, 0 = keep ratio)", type: "number", default: 0, min: 0 },
   ],
   defaultExt: "mp4",
   build(ctx) {
     const video = ctx.file("video");
-    const width = ctx.param("width") || 1280;
-    const height = ctx.param("height") || 720;
-    return { args: [I(video), "-vf", `scale=${width}:${height}`, "-c:a", "copy"], ext: "mp4" };
+    const w = ctx.param("width") || 1280;
+    const h = ctx.param("height") || -1;
+    return { args: [I(video), "-vf", `scale=${w}:${h}`, "-c:a", "copy"], ext: "mp4" };
   },
 });
 
@@ -845,18 +1134,42 @@ tools.push({
   name: "Rotate Video",
   group: "Video",
   icon: "icons/rotate video.png",
-  description: "Rotate a video 90, 180 or 270 degrees.",
+  description: "Rotate a video to any angle, or pick a quick 90/180/270 preset.",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
-  fields: [{ name: "degrees", label: "Degrees", type: "select", options: ["90", "180", "270"] }],
+  fields: [
+    { name: "_editor", label: "Visual editor", type: "editor",
+      editor: { kind: "rotate", emits: ["degrees"],
+        presets: [
+          { value: "0",   text: "0° (no rotation)" },
+          { value: "90",  text: "90° clockwise" },
+          { value: "180", text: "180°" },
+          { value: "270", text: "90° counter-clockwise" },
+          { value: "free",text: "Free angle (drag)" },
+        ],
+        defaultPreset: "free" } },
+    { name: "degrees", label: "Degrees (any)", type: "number", default: 0, min: -360, max: 360, step: 1 },
+  ],
   defaultExt: "mp4",
   build(ctx) {
     const video = ctx.file("video");
-    const deg = Number(ctx.param("degrees") || 90);
-    const vf =
-      deg === 90 ? "transpose=1" :
-      deg === 270 ? "transpose=2" :
-      "transpose=1,transpose=1";
-    return { args: [I(video), "-vf", vf], ext: "mp4" };
+    // Free-angle rotation uses rotate (radians); 90-degree steps use transpose
+    // (no quality loss). 0° short-circuits to a stream copy.
+    const degRaw = Number(ctx.param("degrees") || 0);
+    const deg = ((degRaw % 360) + 360) % 360; // normalize 0..360
+    let vf = "copy"; // handled below
+    if (deg === 0) {
+      return { args: [I(video), "-c", "copy"], ext: "mp4" };
+    } else if (Math.abs(deg - 90) < 0.5) {
+      vf = "transpose=1";
+    } else if (Math.abs(deg - 180) < 0.5) {
+      vf = "transpose=1,transpose=1";
+    } else if (Math.abs(deg - 270) < 0.5) {
+      vf = "transpose=2";
+    } else {
+      const rad = (deg * Math.PI) / 180;
+      vf = `rotate=${rad}:fillcolor=black:bilinear=0`;
+    }
+    return { args: [I(video), "-vf", vf, "-c:a", "copy"], ext: "mp4" };
   },
 });
 
@@ -868,16 +1181,28 @@ tools.push({
   description: "Cut a start to end segment from a video.",
   inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
   fields: [
-    { name: "start", label: "Start (seconds)", type: "number", default: 0, min: 0, step: 0.1 },
-    { name: "end", label: "End (seconds)", type: "number", default: 10, min: 0, step: 0.1 },
+    // 'editor' is a client-side hint: the frontend mounts a playable <video>
+    // with a draggable in/out timeline (the "trim" editor) and writes the
+    // chosen numbers back into the 'start' / 'end' inputs below. The server
+    // only ever sees the plain numbers.
+    { name: "_editor", label: "Trim editor", type: "editor",
+      editor: { kind: "trim", emits: ["start", "end"], durationInput: "video" } },
+    { name: "start", label: "Start (seconds)", type: "number", default: 0, min: 0, step: 0.01 },
+    { name: "end", label: "End (seconds)", type: "number", default: 10, min: 0, step: 0.01 },
   ],
   defaultExt: "mp4",
   build(ctx) {
     const video = ctx.file("video");
+    let start = Number(ctx.param("start")) || 0;
+    let end = Number(ctx.param("end")) || 10;
+    // Guard against an inverted pair (start past end) if the user ever submits
+    // the fields directly — ffmpeg -ss/-to with -c copy would otherwise emit
+    // an empty/odd segment.
+    if (end < start) [start, end] = [end, start];
     return {
       args: [
-        "-ss", String(ctx.param("start") || 0),
-        "-to", String(ctx.param("end") || 10),
+        "-ss", String(start),
+        "-to", String(end),
         ...I(video),
         "-c", "copy",
       ],
@@ -966,6 +1291,9 @@ function publicList() {
       min: f.min,
       max: f.max,
       step: f.step,
+      dependsOn: f.dependsOn,
+      note: f.note,
+      editor: f.editor,
     })),
     defaultExt: t.defaultExt,
   }));
