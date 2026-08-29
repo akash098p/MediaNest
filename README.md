@@ -8,7 +8,6 @@
   <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
   <img src="https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white" alt="FFmpeg" />
   <img src="https://img.shields.io/badge/Local--First-00A67E?style=for-the-badge&logo=lock&logoColor=white" alt="Local First" />
-  <img src="https://img.shields.io/badge/Offline--Ready-5C2D91?style=for-the-badge&logo=wifi&logoColor=white" alt="Offline Ready" />
 </p>
 
 **A local-first audio/video studio + swiss-army toolbox that runs entirely on your own machine.**
