@@ -267,6 +267,31 @@ tools.push({
 });
 
 tools.push({
+  id: "reverse-audio",
+  name: "Reverse Audio",
+  group: "Audio",
+  icon: "icons/reverse audio.png",
+  description: "Play an audio file backwards — every sample is mirrored end-to-end.",
+  inputs: [{ name: "audio", label: "Audio file", accept: "audio/*" }],
+  // `areverse` is an in-memory filter (the whole track must be read first
+  // to be re-emitted), so the output is re-encoded. We keep the source
+  // container/codec to stay format-neutral (mirrors the change-speed tool).
+  defaultExt: "mp3",
+  build(ctx) {
+    const audio = ctx.file("audio");
+    const ext = sameExt(audio);
+    return {
+      args: [
+        I(audio),
+        "-af", "areverse",
+        ...audioRateArgs(ext, autoAudioBitrate(ctx.media)),
+      ],
+      ext,
+    };
+  },
+});
+
+tools.push({
   id: "cut-audio",
   name: "Trim Audio",
   group: "Audio",
@@ -1268,6 +1293,70 @@ tools.push({
       vf = `rotate=${rad}:fillcolor=black:bilinear=0`;
     }
     return { args: [I(video), "-vf", vf, "-c:a", "copy"], ext: "mp4" };
+  },
+});
+
+tools.push({
+  id: "video-flip",
+  name: "Flip Video",
+  group: "Video",
+  icon: "icons/flip video.png",
+  description: "Mirror a video horizontally, vertically, or both — perfect for selfies and re-orienting footage.",
+  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  fields: [
+    {
+      name: "flip",
+      label: "Flip direction",
+      type: "select",
+      options: [
+        { value: "horizontal", text: "Horizontal (mirror left ↔ right)" },
+        { value: "vertical",   text: "Vertical (mirror top ↔ bottom)" },
+        { value: "both",       text: "Both (180° rotation by flipping)" },
+      ],
+      default: "horizontal",
+    },
+  ],
+  defaultExt: "mp4",
+  build(ctx) {
+    const video = ctx.file("video");
+    const mode = ctx.param("flip") || "horizontal";
+    // hflip / vflip are lossless pixel shuffles, so we copy the audio
+    // stream straight through. "both" chains them into a 180° mirror.
+    let vf;
+    if (mode === "vertical") vf = "vflip";
+    else if (mode === "both") vf = "hflip,vflip";
+    else vf = "hflip"; // default → horizontal
+    return { args: [I(video), "-vf", vf, "-c:a", "copy"], ext: "mp4" };
+  },
+});
+
+tools.push({
+  id: "video-reverse",
+  name: "Reverse Video",
+  group: "Video",
+  icon: "icons/reverse video.png",
+  description: "Play a video backwards — both the picture and its soundtrack are reversed end-to-end.",
+  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  defaultExt: "mp4",
+  build(ctx) {
+    const video = ctx.file("video");
+    // The `reverse` filter (video) and `areverse` filter (audio) both need
+    // to read the whole stream first, so the video is re-encoded with
+    // libx264 / aac. `areverse` only operates on the first audio stream
+    // which is fine for the typical single-track case.
+    return {
+      args: [
+        I(video),
+        "-vf", "reverse",
+        "-af", "areverse",
+        "-c:v", "libx264",
+        "-preset", "medium",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
+        ...audioRateArgs("aac", Math.min(192, Math.max(64, autoAudioBitrate(ctx.media)))),
+      ],
+      ext: "mp4",
+    };
   },
 });
 
