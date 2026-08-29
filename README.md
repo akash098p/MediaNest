@@ -1,5 +1,16 @@
 # 🎬 MediaNest
 
+<p align="center">
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5" />
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3" />
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white" alt="FFmpeg" />
+  <img src="https://img.shields.io/badge/Local--First-00A67E?style=for-the-badge&logo=lock&logoColor=white" alt="Local First" />
+  <img src="https://img.shields.io/badge/Offline--Ready-5C2D91?style=for-the-badge&logo=wifi&logoColor=white" alt="Offline Ready" />
+</p>
+
 **A local-first audio/video studio + swiss-army toolbox that runs entirely on your own machine.**
 
 MediaNest ships as two apps served by one tiny Node.js server:
