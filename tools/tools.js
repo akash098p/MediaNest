@@ -30,6 +30,8 @@ async function fetchTools() {
 /* ------------------------------------------------------------------ */
 let toolMeta = null;
 let lastBlobUrl = null;
+let lastZipBlob = null; // server's archive, kept for "Download all as ZIP"
+let lastZipName = null;
 
 
 /* ------------------------------------------------------------------ */
@@ -203,6 +205,11 @@ function isVideoFile(f) {
   if (f.type && String(f.type).startsWith("video/")) return true;
   return /\.(mp4|webm|mov|mkv|avi|ogv|m4v)$/i.test(f.name || "");
 }
+function isAudioFile(f) {
+  if (!f) return false;
+  if (f.type && String(f.type).startsWith("audio/")) return true;
+  return /\.(mp3|wav|ogg|flac|m4a|aac|opus|wma|aiff|aif|mp2|ac3|dts|tak|dsd|caf|weba)$/i.test(f.name || "");
+}
 function videoReady(v) {
   // Wait for a decoded frame to be available — `loadedmetadata` alone is
   // not enough because some codecs (e.g. webm) report dimensions only
@@ -229,6 +236,15 @@ async function mountVisualEditor() {
   const slot = document.querySelector(".vjs-editor-slot");
   if (!slot) return;
 
+  // Cover-pairs editor (Add Cover Art / MP4) doesn't need a source file
+  // — its own pickers drive the 10 hidden form fields directly. Render
+  // it BEFORE the "Add a file above" bail-out below.
+  if (editor.editor && editor.editor.kind === "cover-pairs") {
+    slot.replaceChildren();
+    mountCoverPairsEditor(slot, editor.editor);
+    return;
+  }
+
   const file = pickEditorFile();
   if (!file) {
     slot.replaceChildren(
@@ -240,7 +256,7 @@ async function mountVisualEditor() {
   slot.replaceChildren();
   slot.appendChild(el("p", { class: "small", text: "Loading preview…" }));
 
-  // ---- load the source frame (or first video frame) ----
+  // ---- load the source frame (or first video frame / audio duration) ----
   let srcW = 0, srcH = 0, drawable = null;
   let videoEl = null; // visible player (kept in the timeline bar), drives the canvas.
   try {
@@ -264,6 +280,24 @@ async function mountVisualEditor() {
       videoEl.currentTime = Math.min(0.1, (videoEl.duration || 0) / 4 || 0);
       await new Promise((res) => videoEl.addEventListener("seeked", res, { once: true }));
       srcW = videoEl.videoWidth; srcH = videoEl.videoHeight;
+      drawable = videoEl;
+    } else if (isAudioFile(file)) {
+      // Audio has no video frame — the trim editor only needs the
+      // <audio> element's `duration`, which is published on
+      // `loadedmetadata` (and `loadeddata` as a backstop). We keep it
+      // parked off-screen via `.vjs-frame-sink` like the video branch
+      // so the layout doesn't jump, and give it a synthetic 16:9 size
+      // so the shared "could not read dimensions" guard below doesn't
+      // abort the editor (trim never uses srcW/srcH).
+      videoEl = el("audio", { src: url, muted: "", preload: "auto", class: "vjs-frame-sink" });
+      slot.appendChild(videoEl);
+      await new Promise((resolve, reject) => {
+        if (videoEl.readyState >= 1) return resolve();
+        videoEl.addEventListener("loadedmetadata", resolve, { once: true });
+        videoEl.addEventListener("loadeddata", resolve, { once: true });
+        videoEl.addEventListener("error", () => reject(new Error("Could not read the audio file.")), { once: true });
+      });
+      srcW = 1280; srcH = 720; // synthetic — trim ignores these
       drawable = videoEl;
     } else {
       const img = new Image();
@@ -337,6 +371,22 @@ async function mountVisualEditor() {
   // stage is built.
   if (cfg.kind === "trim") {
     await mountTrimEditor(slot, videoEl, srcW, srcH, cfg);
+    return;
+  }
+
+  // Audio-effect editors: volume, speed, and audio-transition all use a shared
+  // Web-Audio live-preview pattern. The source file is decoded into an
+  // AudioBuffer, piped through the effect nodes, and streamed to a hidden
+  // <audio> element for playback. The effect parameters are also written
+  // back into the hidden form fields so the server can run the real ffmpeg
+  // on "Start download".
+  if (cfg.kind === "volume" || cfg.kind === "speed" || cfg.kind === "audio-transition") {
+    // These editors only make sense for audio inputs. We need the audioEl
+    // from mountVisualEditor's loading stage above — it may be a <video>
+    // element if the user dropped a video file (which the server would still
+    // process via -vn), or a <audio> element.
+    const audioEl = videoEl || null;
+    await mountAudioEffectEditor(slot, audioEl, cfg);
     return;
   }
 
@@ -597,10 +647,37 @@ async function mountVisualEditor() {
   }
   const toDisp = (sx, sy) => ({ x: (sx / srcW) * renderW, y: (sy / srcH) * renderH });
 
+  // Resize has no x/y form fields, so the visual position of the box
+  // lives in this closure rather than the form. The user can drag the
+  // whole box around (handy for scale-to-cover style workflows) and
+  // every handle resizes from the current position.
+  let boxX = 0, boxY = 0;
+  function clampBoxPos(x, y, w, h) {
+    // Keep the box within the source bounds when it fits, or allow it
+    // to extend past the edges when it's larger than the source.
+    const minX = Math.min(0, srcW - w);
+    const maxX = Math.max(0, srcW - w);
+    const minY = Math.min(0, srcH - h);
+    const maxY = Math.max(0, srcH - h);
+    return {
+      x: Math.max(minX, Math.min(maxX, x)),
+      y: Math.max(minY, Math.min(maxY, y)),
+    };
+  }
+  function centerPos(w, h) {
+    return { x: (srcW - w) / 2, y: (srcH - h) / 2 };
+  }
   const read = () => {
     const o = {};
     for (const k of cfg.emits) o[k] = Number(getFormNumber(k)) || 0;
     if (cfg.kind === "rotate") o.degrees = ((o.degrees % 360) + 360) % 360;
+    if (cfg.kind === "resize") {
+      // Resize has no x/y inputs in the form; carry the visual position
+      // through reads so window resizes / preset changes don't snap the
+      // box back to (0, 0).
+      o.x = boxX;
+      o.y = boxY;
+    }
     return o;
   };
   const write = (o) => {
@@ -611,6 +688,16 @@ async function mountVisualEditor() {
       if ("y" in o) o.y = Math.max(0, Math.min(srcH - (o.h || 1), Math.round(o.y)));
       if ("width"  in o) o.width  = Math.max(8, Math.round(o.width));
       if ("height" in o && o.height > 0) o.height = Math.max(8, Math.round(o.height));
+    }
+    if (cfg.kind === "resize") {
+      // Re-clamp the stored box position now that width/height may have
+      // changed (a resize handle can make the box larger than the
+      // source, which would push the previous position out of range).
+      const w = o.width > 0 ? o.width : srcW;
+      const h = o.height > 0 ? o.height : srcH;
+      const c = clampBoxPos(o.x, o.y, w, h);
+      o.x = c.x; o.y = c.y;
+      boxX = c.x; boxY = c.y;
     }
     writeEditorOutputs(o);
     syncBox(o);
@@ -632,10 +719,26 @@ async function mountVisualEditor() {
       const y = "y" in o ? o.y : 0;
       const w = "w" in o ? o.w : ("width" in o ? o.width : srcW);
       const h = "h" in o ? o.h : ("height" in o && o.height > 0 ? o.height : srcH);
-      const tl = toDisp(x, y), br = toDisp(x + w, y + h);
-      body.style.left = tl.x + "px"; body.style.top = tl.y + "px";
-      body.style.width = (br.x - tl.x) + "px"; body.style.height = (br.y - tl.y) + "px";
-      body.style.transform = "none";
+      if (cfg.kind === "resize") {
+        // Resize: the box represents the OUTPUT dimensions over the
+        // source. Position the box at (x, y) in source space (these
+        // come from the closure boxX/boxY, see read()) so every
+        // handle (N/S/E/W and the four corners) can move the matching
+        // edge independently, and dragging the box body moves it as
+        // a whole. The form still stores width/height only.
+        const dispW = (w / srcW) * renderW;
+        const dispH = (h / srcH) * renderH;
+        body.style.left = (x / srcW) * renderW + "px";
+        body.style.top = (y / srcH) * renderH + "px";
+        body.style.width = dispW + "px";
+        body.style.height = dispH + "px";
+        body.style.transform = "none";
+      } else {
+        const tl = toDisp(x, y), br = toDisp(x + w, y + h);
+        body.style.left = tl.x + "px"; body.style.top = tl.y + "px";
+        body.style.width = (br.x - tl.x) + "px"; body.style.height = (br.y - tl.y) + "px";
+        body.style.transform = "none";
+      }
     }
     updateReadout();
   }
@@ -643,14 +746,18 @@ async function mountVisualEditor() {
     const o = read();
     if (cfg.kind === "rotate") {
       readout.textContent = `Angle: ${Math.round(o.degrees)}°`;
-    } else {
-      const w = "w" in o ? o.w : o.width;
-      let h = "h" in o ? o.h : o.height;
+    } else if (cfg.kind === "resize") {
+      const w = o.width;
+      let h = o.height;
       // For Resize, height=0 means "auto" — show the aspect-locked value
       // so the user knows what the actual output height will be.
-      if (cfg.kind === "resize" && (!h || h <= 0) && w > 0) {
+      if ((!h || h <= 0) && w > 0) {
         h = Math.max(8, Math.round(w * (srcH / srcW)));
       }
+      readout.textContent = `${w} × ${h} px`;
+    } else {
+      const w = "w" in o ? o.w : o.width;
+      const h = "h" in o ? o.h : o.height;
       const x = "x" in o ? o.x : 0;
       const y = "y" in o ? o.y : 0;
       readout.textContent = `${w} × ${h} px  ·  starts at (${x}, ${y})`;
@@ -674,6 +781,13 @@ async function mountVisualEditor() {
           o.height = aspectLock ? Math.max(8, Math.round(w * (srcH / srcW))) : 0;
         }
       }
+      // Recenter the box on every preset change so the new size lands
+      // in a sensible spot (otherwise it inherits the previous drag).
+      const w = o.width > 0 ? o.width : srcW;
+      const h = o.height > 0 ? o.height : srcH;
+      const c = centerPos(w, h);
+      boxX = c.x; boxY = c.y;
+      o.x = c.x; o.y = c.y;
     } else if (cfg.kind === "crop") {
       if (value !== "free") {
         const ar = aspectRatio(value);
@@ -695,7 +809,13 @@ async function mountVisualEditor() {
   presetSel.addEventListener("change", () => applyPreset(presetSel.value));
   resetBtn.addEventListener("click", () => {
     if (cfg.kind === "rotate") { write({ degrees: 0 }); presetSel.value = "0"; }
-    else if (cfg.kind === "resize") { write({ width: srcW, height: 0 }); presetSel.value = "original"; }
+    else if (cfg.kind === "resize") {
+      // Reset to "original" size, centered.
+      const c = centerPos(srcW, srcH);
+      boxX = c.x; boxY = c.y;
+      write({ width: srcW, height: 0, x: c.x, y: c.y });
+      presetSel.value = "original";
+    }
     else { write({ x: 0, y: 0, w: srcW, h: srcH }); presetSel.value = "free"; }
   });
   applyPreset(presetSel.value || cfg.defaultPreset);
@@ -703,14 +823,15 @@ async function mountVisualEditor() {
   // ---- drag ----
   // Build a complete state object for the current tool, filling in any
   // implicit fields with sensible defaults. For Resize the form only
-  // stores width/height, but the crop "region" is implicitly the whole
-  // image (x=0, y=0). For Crop the form has all four, and for Rotate
-  // only degrees. This helper makes moveDrag + syncBox work uniformly.
+  // stores width/height, but the visual box also has a position that
+  // lives in the closure (boxX/boxY). For Crop the form has all four,
+  // and for Rotate only degrees. This helper makes moveDrag + syncBox
+  // work uniformly.
   function fullState() {
     const o = read();
     if (cfg.kind === "resize") {
-      if (!("x" in o)) o.x = 0;
-      if (!("y" in o)) o.y = 0;
+      if (!("x" in o)) o.x = boxX;
+      if (!("y" in o)) o.y = boxY;
       if (!(o.width  > 0)) o.width  = srcW;
       if (!(o.height > 0)) o.height = srcH; // 0 means "auto" -> use srcH for display
     } else if (cfg.kind === "crop") {
@@ -758,31 +879,81 @@ async function mountVisualEditor() {
       const sdx = (dx / renderW) * srcW;
       const sdy = (dy / renderH) * srcH;
       let nx = startX, ny = startY, nw = startW, nh = startH;
-      if (h.includes("w")) { nx = startX + sdx; nw = startW - sdx; }
-      if (h.includes("e")) { nw = startW + sdx; }
-      if (h.includes("n")) { ny = startY + sdy; nh = startH - sdy; }
-      if (h.includes("s")) { nh = startH + sdy; }
+      // ── W / E / N / S handle movement ─────────────────────────────────
+      // Anchor the OPPOSITE canvas edge so it does NOT shift visually when
+      // the box size changes.  Without anchoring, shrinking/growing changes
+      // the canvas pixel position of the far edge and the user sees the wrong
+      // edge move.
+      //
+      //   W → anchor canvas-right  (box shrinks/grows from the left)
+      //   E → anchor canvas-left   (box shrinks/grows from the right)
+      //   N → anchor canvas-bottom (box shrinks/grows from the top)
+      //   S → anchor canvas-top    (box shrinks/grows from the bottom)
+      if (h.includes("w")) {
+        nx = startX + sdx; nw = startW - sdx;
+        if (aspectLock) nx = startX + (startW - nw); // ratio lands on nx → canvas-right fixed
+        else            nx = (startX + startW) - nw; // canvas-right fixed directly
+      }
+      if (h.includes("e")) {
+        nw = startW + sdx;
+        if (aspectLock) { /* nw lands on canvas-left via aspect on nh (see below) */ }
+        else            nx = startX;                  // canvas-left fixed → nw IS the delta
+      }
+      if (h.includes("n")) {
+        ny = startY + sdy; nh = startH - sdy;
+        if (aspectLock) ny = startY + (startH - nh); // ratio lands on ny → canvas-bottom fixed
+        else            ny = (startY + startH) - nh; // canvas-bottom fixed directly
+      }
+      if (h.includes("s")) {
+        nh = startH + sdy;
+        if (aspectLock) { /* nh lands on canvas-top via aspect on nw (see below) */ }
+        else            ny = startY;                  // canvas-top fixed → nh IS the delta
+      }
       if (aspectLock) {
         const ar = startW / startH;
-        if (Math.abs(sdx) > Math.abs(sdy)) nh = nw / ar;
-        else nw = nh * ar;
-        if (h.includes("w")) nx = startX + (startW - nw);
-        if (h.includes("n")) ny = startY + (startH - nh);
+        if (Math.abs(sdx) > Math.abs(sdy)) {
+          nh = nw / ar;  // width leads → recalculate height
+        } else {
+          nw = nh * ar;  // height leads → recalculate width
+        }
+        // Aspect correction may move the OPPOSITE dimension.  Re-anchor
+        // canvas-left (when E/NE/SE led) or canvas-top (when S/SE/SW led)
+        // so the anchored edge stays fixed and the box keeps the
+        // expected aspect.
+        if (h.includes("e") || h.includes("se") || h.includes("ne")) {
+          nx = (startX + startW) - nw;  // canvas-left fixed
+        }
+        if (h.includes("s") || h.includes("se") || h.includes("sw")) {
+          ny = (startY + startH) - nh;  // canvas-top fixed
+        }
+        // (W-only and N-only handles already anchored their opposite
+        // edge in the W/N blocks above; nothing to do here.)
       }
-      if (nw < 16) { nw = 16; if (aspectLock) nh = nw / ar; }
-      if (nh < 16) { nh = 16; if (aspectLock) nw = nh * ar; }
+      // Enforce minimum size; when the dimension is clamped, the canvas
+      // anchor of the opposite edge must shift so the box doesn't drift.
+      if (nw < 16) {
+        const prevNw = nw; nw = 16;
+        nx -= (nw - prevNw);  // keep canvas-right fixed → move left edge right
+        if (aspectLock) nh = nw / ar;
+      }
+      if (nh < 16) {
+        const prevNh = nh; nh = 16;
+        ny -= (nh - prevNh);  // keep canvas-bottom fixed → move top edge down
+        if (aspectLock) nw = nh * ar;
+      }
       if ("w" in o) { o.w = nw; o.h = nh; o.x = nx; o.y = ny; }
       else {
-        // Resize: the output is always the full source image (no crop),
-        // so the box is anchored at (0, 0). Only width/height change.
-        o.width = nw;
-        // Always write the computed height so the visual box reflects
-        // the new dimensions. The server treats height>0 the same as
-        // height=0 (auto) — ffmpeg's "-1" is equivalent to the explicit
-        // value. This makes the N/S handles visibly change the box
-        // height in the editor, not just the width.
+        // Resize: nx/ny were set by the canvas-anchoring math above.
+        // They anchor the OPPOSITE canvas edge so the matching edge
+        // (W/E/N/S) moves visually.  write() re-clamps so a grow handle
+        // can't push the box off-canvas.  The server treats height>0
+        // the same as height=0 (auto) — ffmpeg's "-1" is equivalent —
+        // so the explicit height value makes the N/S handles visibly
+        // change the box height.
+        o.width  = nw;
         o.height = nh;
-        o.x = 0; o.y = 0;
+        o.x = nx;  // canvas-anchored position (fixed opposite edge)
+        o.y = ny;
       }
     }
     write(o);
@@ -790,11 +961,10 @@ async function mountVisualEditor() {
   body.addEventListener("pointerdown", (e) => {
     if (rotHandle && e.target === rotHandle) startDrag("rot", e);
     else if (e.target.classList.contains("vjs-handle")) startDrag(e.target.dataset.handle, e);
-    // For Resize, clicking inside the box (not on a handle) does nothing:
-    // the box represents the *output viewport* over the source, which is
-    // always anchored at (0, 0) in source coordinates. Only the handles
-    // change the output size.
-    else if (cfg.kind !== "resize") startDrag("move", e);
+    // Click anywhere inside the box (not on a handle) drags the whole
+    // box. Works for Crop (move the crop region) and Resize (move the
+    // output viewport — useful for scale-to-cover style workflows).
+    else startDrag("move", e);
     try { body.setPointerCapture(e.pointerId); } catch (_) {}
   });
   body.addEventListener("pointermove", moveDrag);
@@ -820,17 +990,21 @@ function vjsFmtTime(s) {
   const sec = s - m * 60;
   return `${m}:${sec.toFixed(1).padStart(4, "0")}`;
 }
-function mountTrimEditor(slot, videoEl, srcW, srcH, cfg) {
-  // Trim is video-only: a playable <video> + a draggable in/out timeline.
-  if (!videoEl) {
+function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg) {
+  // Trim is video or audio: a playable <video>/<audio> + a draggable
+  // in/out timeline. The caller (mountVisualEditor) passes whichever
+  // element the file produced — <video> for video files, <audio> for
+  // audio-only files.
+  if (!mediaEl) {
     slot.replaceChildren(
-      el("p", { class: "small", text: "⚠ Trim plays a video file — add one above to set in/out points." }),
+      el("p", { class: "small", text: "⚠ Trim plays a media file — add one above to set in/out points." }),
     );
     return;
   }
+  const isAudio = mediaEl.tagName === "AUDIO";
   // Let audio through while trimming (playback always starts on a click).
-  videoEl.muted = false;
-  videoEl.pause();
+  mediaEl.muted = false;
+  mediaEl.pause();
 
   const form = $("#toolForm");
   const startInput = form && form.querySelector("[name=start]");
@@ -840,16 +1014,16 @@ function mountTrimEditor(slot, videoEl, srcW, srcH, cfg) {
 
   // Wait until a real duration is known before laying the timeline out.
   const ready =
-    videoEl.duration && isFinite(videoEl.duration) && videoEl.duration > 0
+    mediaEl.duration && isFinite(mediaEl.duration) && mediaEl.duration > 0
       ? Promise.resolve()
-      : new Promise((res) => videoEl.addEventListener("loadedmetadata", res, { once: true }));
+      : new Promise((res) => mediaEl.addEventListener("loadedmetadata", res, { once: true }));
 
   return ready.then(() => {
-    const raw = videoEl.duration;
+    const raw = mediaEl.duration;
     const dur = (isFinite(raw) && raw > 0) ? raw : 0;
     if (!dur) {
       slot.replaceChildren(
-        el("p", { class: "small", text: "⚠ Could not read the video duration." }),
+        el("p", { class: "small", text: "⚠ Could not read the media duration." }),
       );
       return;
     }
@@ -863,9 +1037,17 @@ function mountTrimEditor(slot, videoEl, srcW, srcH, cfg) {
     slot.replaceChildren();
 
     const player = el("div", { class: "vjs-trim-player" });
-    const vidWrap = el("div", { class: "vjs-trim-video" });
-    vidWrap.appendChild(videoEl); // move the loaded <video> into the player
-    player.appendChild(vidWrap);
+    if (isAudio) {
+      // Audio has no video frame — show only the native <audio> player
+      // (with the scrubber / time row) and the timeline below it.
+      const audWrap = el("div", { class: "vjs-trim-audio" });
+      audWrap.appendChild(mediaEl); // move the loaded <audio> into the player
+      player.appendChild(audWrap);
+    } else {
+      const vidWrap = el("div", { class: "vjs-trim-video" });
+      vidWrap.appendChild(mediaEl); // move the loaded <video> into the player
+      player.appendChild(vidWrap);
+    }
 
     const controls = el("div", { class: "vjs-trim-controls" });
     const playBtn = el("button", { type: "button", class: "vjs-play-btn", title: "Play / Pause", text: "▶" });
@@ -930,15 +1112,15 @@ function mountTrimEditor(slot, videoEl, srcW, srcH, cfg) {
 
     // --- playback ---
     playBtn.addEventListener("click", () => {
-      if (videoEl.paused) videoEl.play().catch(() => {});
-      else videoEl.pause();
+      if (mediaEl.paused) mediaEl.play().catch(() => {});
+      else mediaEl.pause();
     });
     function onPlay() { playBtn.textContent = "⏸"; playing = true; }
     function onPause() { playBtn.textContent = "▶"; playing = false; }
-    videoEl.addEventListener("play", onPlay);
-    videoEl.addEventListener("playing", onPlay);
-    videoEl.addEventListener("pause", onPause);
-    videoEl.addEventListener("ended", onPause);
+    mediaEl.addEventListener("play", onPlay);
+    mediaEl.addEventListener("playing", onPlay);
+    mediaEl.addEventListener("pause", onPause);
+    mediaEl.addEventListener("ended", onPause);
 
     loopBtn.addEventListener("click", () => {
       loop = !loop;
@@ -946,18 +1128,18 @@ function mountTrimEditor(slot, videoEl, srcW, srcH, cfg) {
       loopBtn.textContent = loop ? "↻ Loop on" : "⏏";
     });
 
-    videoEl.addEventListener("timeupdate", () => {
-      timeEl.textContent = vjsFmtTime(videoEl.currentTime) + " / " + vjsFmtTime(dur);
-      playhead.style.left = pct(videoEl.currentTime) + "%";
+    mediaEl.addEventListener("timeupdate", () => {
+      timeEl.textContent = vjsFmtTime(mediaEl.currentTime) + " / " + vjsFmtTime(dur);
+      playhead.style.left = pct(mediaEl.currentTime) + "%";
       // Don't preview past the out-point — that's the boundary the user is trimming to.
-      if (playing && end < dur && videoEl.currentTime >= end) {
-        if (loop) videoEl.currentTime = start;
-        else videoEl.pause();
+      if (playing && end < dur && mediaEl.currentTime >= end) {
+        if (loop) mediaEl.currentTime = start;
+        else mediaEl.pause();
       }
     });
-    videoEl.addEventListener("seeked", () => {
-      playhead.style.left = pct(videoEl.currentTime) + "%";
-      timeEl.textContent = vjsFmtTime(videoEl.currentTime) + " / " + vjsFmtTime(dur);
+    mediaEl.addEventListener("seeked", () => {
+      playhead.style.left = pct(mediaEl.currentTime) + "%";
+      timeEl.textContent = vjsFmtTime(mediaEl.currentTime) + " / " + vjsFmtTime(dur);
     });
 
     // --- timeline: click to seek, drag handles to set in/out ---
@@ -966,7 +1148,7 @@ function mountTrimEditor(slot, videoEl, srcW, srcH, cfg) {
       e.preventDefault();
       const rect = track.getBoundingClientRect();
       const t = clamp(((e.clientX - rect.left) / rect.width) * dur, 0, dur);
-      videoEl.currentTime = t;
+      mediaEl.currentTime = t;
     });
 
     function handleDown(e) {
@@ -985,7 +1167,7 @@ function mountTrimEditor(slot, videoEl, srcW, srcH, cfg) {
       else end = clamp(t, start, dur);
       syncVisual();
       // Scrub the preview to the boundary being dragged so the cut frame is visible.
-      videoEl.currentTime = drag.handle === "start" ? start : end;
+      mediaEl.currentTime = drag.handle === "start" ? start : end;
     }
     function handleUp() {
       if (!drag) return;
@@ -1008,9 +1190,595 @@ function mountTrimEditor(slot, videoEl, srcW, srcH, cfg) {
     if (endInput) endInput.addEventListener("change", onInputsChanged);
 
     // Preview begins at the in-point.
-    try { videoEl.currentTime = start; } catch (_) {}
+    try { mediaEl.currentTime = start; } catch (_) {}
     playhead.style.left = pct(start) + "%";
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* Audio-effect live-preview editor (volume / speed / audio-transition) */
+/* ------------------------------------------------------------------ */
+
+let _wac = null; // shared Web Audio state
+
+function _wacCleanup() {
+  if (!_wac) return;
+  try { _wac.src?.stop(); } catch (_) {}
+  try { _wac.ctx?.close(); } catch (_) {}
+  _wac = null;
+}
+
+/**
+ * Start (or restart from `offset`) playing the decoded buffer through the
+ * live effect graph.  Returns the new AudioBufferSourceNode so callers can
+ * attach `onended` handlers.
+ */
+function _wacPlay(state, offset = 0) {
+  if (!state?.buffer) return null;
+  try { state.src?.stop(); } catch (_) {}
+  state.src = null;
+  const ctx = state.ctx;
+  const src = ctx.createBufferSource();
+  src.buffer = state.buffer;
+  src.playbackRate.value = state.playbackRate || 1;
+  src.connect(state.gainNode);
+  state.gainNode.connect(ctx.destination);
+  // Clamp offset so the user can't start past the end.
+  const safeOffset = Math.max(0, Math.min(offset, state.buffer.duration));
+  src.start(0, safeOffset);
+  state.src = src;
+  // Track which offset the current source started at so the UI time
+  // display can interpolate while the source is running.
+  state._srcStart = ctx.currentTime - safeOffset / (state.playbackRate || 1);
+  return src;
+}
+
+function _scheduleFadeGain(state, now) {
+  if (!state?.ctx || !state?.gainNode) return;
+  const g = state.gainNode.gain;
+  const dur = state.buffer?.duration || 0;
+  const fi = state.fadeIn || 0;
+  const fo = state.fadeOut || 0;
+  g.cancelScheduledValues(now);
+  g.setValueAtTime(g.value, now);
+  if (fi > 0) {
+    g.linearRampToValueAtTime(1, now + fi);
+  } else {
+    g.setValueAtTime(1, now);
+  }
+  if (fo > 0 && dur > 0) {
+    g.setValueAtTime(g.value, Math.max(now, now + Math.max(0, dur - fo - 0.01)));
+    g.linearRampToValueAtTime(0, now + dur);
+  }
+}
+
+function mountAudioEffectEditor(slot, mediaEl, cfg) {
+  const form = $("#toolForm");
+  if (!form) return;
+  if (!mediaEl?.src) {
+    slot.replaceChildren(el("p", { class: "small", text: "⚠ Add an audio file above to use the live editor." }));
+    return;
+  }
+  if (!window.AudioContext && !window.webkitAudioContext) {
+    slot.replaceChildren(el("p", { class: "small", text: "⚠ Your browser does not support the Web Audio API." }));
+    return;
+  }
+  const kind = cfg.kind;
+  slot.replaceChildren();
+  const card = el("div", { class: "vae-card" });
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const audioCtx = new AC();
+  const gainNode = audioCtx.createGain();
+  gainNode.gain.value = 1;
+  const state = {
+    ctx: audioCtx, gainNode,
+    buffer: null, src: null,
+    playbackRate: 1, fadeIn: 0, fadeOut: 0,
+    loaded: false,
+    playing: false,           // is the source currently producing sound?
+    _srcStart: 0,              // ctx.currentTime at which src started, used to interpolate UI time
+    _stopped: true,            // user pressed Stop; next Play should restart from 0
+  };
+  _wacCleanup();
+  _wac = state;
+
+  fetch(mediaEl.src)
+    .then((r) => r.arrayBuffer())
+    .then((buf) => audioCtx.decodeAudioData(
+      buf,
+      (decoded) => {
+        state.buffer = decoded;
+        state.loaded = true;
+        _scheduleFadeGain(state, audioCtx.currentTime);
+        _buildAudioEditorUI(card, state, cfg, () => {
+          _scheduleFadeGain(state, audioCtx.currentTime);
+        });
+        // Note: do NOT auto-play. The user clicks ▶ to start. This
+        // matches how the other tools behave and lets the user preview
+        // the sliders before committing.
+      },
+      () => {
+        audioCtx.close().catch(() => {});
+        card.replaceChildren(el("p", { class: "small", text: "⚠ Could not decode the audio file." }));
+      },
+    ))
+    .catch(() => {
+      audioCtx.close().catch(() => {});
+      card.replaceChildren(el("p", { class: "small", text: "⚠ Could not load the audio file." }));
+    });
+
+  slot.appendChild(card);
+}
+
+function _buildAudioEditorUI(card, state, cfg, onFadeChange) {
+  const kind = cfg.kind;
+  const form = $("#toolForm");
+  const formVal = (name, fallback) => {
+    const n = form?.querySelector(`[name="${name}"]`);
+    return n ? Number(n.value) : fallback;
+  };
+  const writeVal = (name, val) => {
+    const n = form?.querySelector(`[name="${name}"]`);
+    if (n) n.value = val;
+    writeEditorOutputs({ [name]: val });
+  };
+
+  // Header.
+  const iconMap = { volume: "🔊", speed: "⏱", "audio-transition": "🌊" };
+  const labelMap = { volume: "Volume", speed: "Audio Speed", "audio-transition": "Fade In / Fade Out" };
+  card.appendChild(el("div", { class: "vae-header" }, [
+    el("span", { class: "vae-header-icon", text: iconMap[kind] || "🎵" }),
+    el("span", { class: "vae-header-label", text: labelMap[kind] || "Audio Effect" }),
+    el("span", { class: "vae-live-badge", text: "LIVE" }),
+  ]));
+
+  // ------------------------------------------------------------------
+  // Custom player: Play/Pause toggle + Stop + time + seek bar.
+  // Drives the Web Audio context directly.  Replaces the previous
+  // half-built <audio controls> element that had no src and therefore
+  // could not be played or paused by the user.
+  // ------------------------------------------------------------------
+  const playBtn = el("button", { type: "button", class: "vae-playbtn", "aria-label": "Play preview" }, [
+    el("span", { class: "vae-playbtn-glyph", text: "▶" }),
+    el("span", { class: "vae-playbtn-label", text: "Play" }),
+  ]);
+  const stopBtn = el("button", { type: "button", class: "vae-stopbtn", "aria-label": "Stop preview" }, [
+    el("span", { text: "⏹" }),
+    el("span", { class: "vae-stopbtn-label", text: "Stop" }),
+  ]);
+  const timeCur = el("span", { class: "vae-time-cur", text: "0:00" });
+  const timeDur = el("span", { class: "vae-time-dur", text: "0:00" });
+  const seek = el("input", {
+    type: "range", class: "vae-seek", min: 0, max: 1000, step: 1, value: 0,
+    "aria-label": "Seek preview",
+  });
+  const status = el("span", { class: "vae-status muted-dim", text: "Ready" });
+
+  const playerBar = el("div", { class: "vae-player" }, [playBtn, stopBtn, timeCur, seek, timeDur, status]);
+  card.appendChild(playerBar);
+
+  const getDuration = () => state.buffer?.duration || 0;
+  const getOffset = () => {
+    const dur = getDuration();
+    if (state.playing && state.src) {
+      const elapsedCtx = state.ctx.currentTime - state._srcStart;
+      return Math.min(dur, Math.max(0, elapsedCtx * (state.playbackRate || 1)));
+    }
+    return state._lastOffset || 0;
+  };
+  const renderTime = () => {
+    const off = getOffset();
+    const dur = getDuration();
+    timeCur.textContent = _fmtSec(off);
+    timeDur.textContent = _fmtSec(dur);
+    if (dur > 0) seek.value = String(Math.round((off / dur) * 1000));
+  };
+  const setStatus = (text) => { status.textContent = text; };
+  const setPlayingUI = (playing) => {
+    state.playing = playing;
+    playBtn.classList.toggle("is-playing", playing);
+    playBtn.querySelector(".vae-playbtn-glyph").textContent = playing ? "⏸" : "▶";
+    playBtn.querySelector(".vae-playbtn-label").textContent = playing ? "Pause" : "Play";
+    playBtn.setAttribute("aria-label", playing ? "Pause preview" : "Play preview");
+  };
+  // Live UI tick — updates time display + seek bar while playing.
+  let rafId = 0;
+  const tick = () => {
+    if (!state.loaded) return;
+    if (state.playing) {
+      const dur = getDuration();
+      const off = getOffset();
+      if (dur > 0 && off >= dur - 0.01) {
+        try { state.src?.stop(); } catch (_) {}
+        state.src = null;
+        state._lastOffset = dur;
+        setPlayingUI(false);
+        setStatus("Finished — press Play to replay");
+        renderTime();
+        return;
+      }
+      renderTime();
+    }
+    rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+
+  playBtn.addEventListener("click", () => {
+    if (!state.loaded || !state.buffer) return;
+    if (state.ctx.state === "suspended") state.ctx.resume();
+    if (state.playing) {
+      // Pause: capture the current offset, stop the source, keep offset.
+      const off = getOffset();
+      try { state.src?.stop(); } catch (_) {}
+      state.src = null;
+      state._lastOffset = off;
+      setPlayingUI(false);
+      setStatus("Paused");
+    } else {
+      // Play: from current offset, or from start if we Stopped/Finished.
+      const dur = getDuration();
+      let off = state._stopped ? 0 : (state._lastOffset || 0);
+      if (off >= dur) off = 0;
+      const src = _wacPlay(state, off);
+      if (!src) return;
+      state._stopped = false;
+      state._lastOffset = off;
+      src.onended = () => {
+        if (state.src === src) {
+          state.src = null;
+          state._lastOffset = getDuration();
+          setPlayingUI(false);
+          setStatus("Finished — press Play to replay");
+          renderTime();
+        }
+      };
+      setPlayingUI(true);
+      setStatus("Playing…");
+    }
+  });
+  stopBtn.addEventListener("click", () => {
+    if (!state.loaded) return;
+    try { state.src?.stop(); } catch (_) {}
+    state.src = null;
+    state._lastOffset = 0;
+    state._stopped = true;
+    setPlayingUI(false);
+    setStatus("Stopped");
+    renderTime();
+  });
+  seek.addEventListener("input", () => {
+    if (!state.loaded) return;
+    const dur = getDuration();
+    if (dur <= 0) return;
+    const newOff = (Number(seek.value) / 1000) * dur;
+    state._lastOffset = newOff;
+    if (state.playing && state.src) _wacPlay(state, newOff);
+    renderTime();
+  });
+
+  renderTime();
+
+  const sliders = el("div", { class: "vae-sliders" });
+
+  // Volume slider.
+  if (kind === "volume") {
+    const initial = formVal("volume", 6);
+    state.gainNode.gain.setValueAtTime(Math.pow(10, initial / 20), state.ctx.currentTime);
+    writeVal("volume", initial);
+    sliders.appendChild(_makeSliderRow({
+      label: "Gain", unit: " dB", min: -30, max: 30, step: 1, value: initial,
+      onInput(val) {
+        state.gainNode.gain.setValueAtTime(Math.pow(10, val / 20), state.ctx.currentTime);
+        writeVal("volume", val);
+      },
+    }));
+  }
+
+  // Speed slider.  For speed we restart the source at the *current UI
+  // offset* so the new rate is applied from where the user can see it
+  // and the seek bar stays accurate.
+  if (kind === "speed") {
+    const initial = formVal("speed", 1.25);
+    state.playbackRate = initial;
+    if (state.src) state.src.playbackRate.value = initial;
+    writeVal("speed", initial);
+    const row = _makeSliderRow({
+      label: "Speed", min: 0.25, max: 4, step: 0.05, value: initial,
+      displayVal: (v) => v.toFixed(2) + "×",
+      onInput(val) {
+        const wasPlaying = state.playing;
+        const off = getOffset();
+        state.playbackRate = val;
+        if (wasPlaying && state.src) {
+          // Re-anchor the source at the current offset so the seek bar
+          // stays accurate and the new rate takes effect immediately.
+          const newSrc = _wacPlay(state, off);
+          if (newSrc) {
+            newSrc.onended = () => {
+              if (state.src === newSrc) {
+                state.src = null;
+                state._lastOffset = getDuration();
+                setPlayingUI(false);
+                setStatus("Finished — press Play to replay");
+                renderTime();
+              }
+            };
+          }
+        } else if (state.src) {
+          state.src.playbackRate.value = val;
+        }
+        writeVal("speed", val);
+      },
+    });
+    const durLabel = el("span", { class: "vae-dur-hint muted-dim small" });
+    const updateDur = (spd) => {
+      const orig = state.buffer?.duration || 0;
+      durLabel.textContent = `Result: ${_fmtSec(orig)} → ${_fmtSec(orig / spd)}`;
+    };
+    updateDur(initial);
+    row.appendChild(durLabel);
+    sliders.appendChild(row);
+  }
+
+  // Fade-in / Fade-out sliders.
+  if (kind === "audio-transition") {
+    const fi0 = formVal("fadeIn", 2);
+    const fo0 = formVal("fadeOut", 2);
+    state.fadeIn = fi0;
+    state.fadeOut = fo0;
+    writeVal("fadeIn", fi0);
+    writeVal("fadeOut", fo0);
+    const max = Math.max(0, Math.min((state.buffer?.duration || 0) / 2, 10));
+
+    sliders.appendChild(_makeSliderRow({
+      label: "Fade in", unit: " s", min: 0, max, step: 0.5, value: fi0,
+      onInput(val) { state.fadeIn = val; writeVal("fadeIn", val); if (onFadeChange) onFadeChange(); },
+    }));
+    sliders.appendChild(_makeSliderRow({
+      label: "Fade out", unit: " s", min: 0, max, step: 0.5, value: fo0,
+      onInput(val) { state.fadeOut = val; writeVal("fadeOut", val); if (onFadeChange) onFadeChange(); },
+    }));
+  }
+
+  card.appendChild(sliders);
+  card.appendChild(el("p", {
+    class: "small muted-dim",
+    text: "Press Play to preview. Drag the sliders to fine-tune, then click \"Start download\" to export the final result.",
+  }));
+}
+
+function _makeSliderRow({ label, unit = "", min, max, step, value, displayVal, onInput }) {
+  const row = el("div", { class: "vae-slider-row" });
+  row.appendChild(el("label", { class: "vae-slider-label", text: label }));
+  const valSpan = el("span", { class: "vae-slider-value" });
+  const fmt = displayVal || ((v) => v + unit);
+  valSpan.textContent = fmt(value);
+  const slider = el("input", { type: "range", class: "vae-range", min, max, step, value });
+  slider.addEventListener("input", () => {
+    const v = Number(slider.value);
+    valSpan.textContent = fmt(v);
+    if (onInput) onInput(v);
+  });
+  row.appendChild(valSpan);
+  row.appendChild(slider);
+  return row;
+}
+
+function _fmtSec(s) {
+  if (!isFinite(s) || s < 0) return "0:00";
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  return h > 0 ? `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}` : `${m}:${String(sec).padStart(2,"0")}`;
+}
+
+/**
+ * Cover-pairs editor — for tools like "Add Cover Art / MP4" that take N
+ * (audio, image) pairs. Renders 5 compact rows side-by-side: each row
+ * has an audio picker and an image picker in a single 2-column grid, so
+ * the whole editor stays much shorter than 10 stacked drop zones.
+ *
+ * No "Drag & drop from Explorer" hint text — the user just clicks the
+ * pill-shaped buttons (or drags straight onto them) to attach files.
+ * Each filled cell shows the file name, size, and a tiny ✕ to remove.
+ */
+function mountCoverPairsEditor(slot, cfg) {
+  const form = $("#toolForm");
+  if (!form || !slot) return;
+
+  const pairs = Math.max(1, Number(cfg.pairs) || 5);
+
+  // Reuse the shared file upload queue so the hidden inputs (built by
+  // installCoverPairsHiddenInputs) are populated the same way every
+  // other tool does it — syncHiddenInput + filesFor(name) keeps the
+  // 10 FormData slots in sync.
+  const wrap = el("div", { class: "cpe-wrap" });
+
+  for (let i = 1; i <= pairs; i++) {
+    wrap.appendChild(_buildCoverPairRow(i, pairs));
+  }
+
+  // The "Start download" button lives in the form's own field row, so
+  // we don't add a CTA here. A small hint is enough.
+  wrap.appendChild(el("p", {
+    class: "small muted-dim",
+    text: "Up to 5 audio + image pairs. Slot 1 is required; leave later rows empty to do fewer.",
+  }));
+
+  slot.appendChild(wrap);
+}
+
+function _buildCoverPairRow(n, total) {
+  const row = el("div", {
+    class: `cpe-row${n > 1 ? " optional" : ""}`,
+    "data-pair-index": n,
+  });
+
+  const head = el("div", { class: "cpe-row-head" });
+  head.appendChild(el("span", {
+    class: "cpe-row-title",
+    text: `Pair ${n}${n > 1 ? "  (optional)" : ""}`,
+  }));
+  // "✕" button removes the entire row's files.
+  const removeBtn = el("button", {
+    type: "button",
+    class: "cpe-remove-btn",
+    title: "Clear this pair",
+    text: "✕",
+  });
+  removeBtn.addEventListener("click", () => {
+    filesFor(`audio${n}`).length = 0;
+    filesFor(`image${n}`).length = 0;
+    uploadRefreshers[`audio${n}`] && uploadRefreshers[`audio${n}`]();
+    uploadRefreshers[`image${n}`] && uploadRefreshers[`image${n}`]();
+  });
+  head.appendChild(removeBtn);
+  row.appendChild(head);
+
+  const cells = el("div", { class: "cpe-cells" });
+  cells.appendChild(_buildCoverPairCell({ kind: "audio", pair: n, accept: "audio/*" }));
+  cells.appendChild(_buildCoverPairCell({ kind: "image", pair: n, accept: "image/*" }));
+  row.appendChild(cells);
+
+  return row;
+}
+
+function _buildCoverPairCell({ kind, pair, accept }) {
+  const name = `${kind}${pair}`;
+  const cell = el("div", { class: "cpe-cell" });
+  const icon = kind === "audio" ? "🔊" : "🖼️";
+
+  // Hidden file input (kept off-screen). We share the same file picker
+  // mechanism the rest of the app uses — clicking the visible "Choose"
+  // button opens this input, drag & drop also feeds it.
+  const input = el("input", {
+    type: "file",
+    name,
+    accept,
+    "data-cpe-input": name,
+  });
+  input.style.display = "none";
+  cell.appendChild(input);
+
+  const placeholder = el("button", {
+    type: "button",
+    class: "cpe-btn",
+    title: `Choose ${kind} file for pair ${pair}`,
+  }, [
+    el("span", { class: "cpe-btn-icon", text: icon }),
+    el("span", { class: "cpe-btn-text", text: `Choose ${kind}` }),
+  ]);
+  placeholder.addEventListener("click", () => input.click());
+
+  // Drag & drop straight onto the pill button.
+  ["dragenter", "dragover"].forEach((evt) =>
+    placeholder.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      placeholder.classList.add("dragover");
+    }),
+  );
+  ["dragleave", "drop"].forEach((evt) =>
+    placeholder.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      placeholder.classList.remove("dragover");
+    }),
+  );
+  placeholder.addEventListener("drop", (e) => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    // Build a synthetic FileList-like assignment.
+    const dt = new DataTransfer();
+    dt.items.add(f);
+    input.files = dt.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  cell.appendChild(placeholder);
+
+  // The same filesFor() ref + syncHiddenInput() flow the rest of the
+  // app uses; we re-use it so behaviour is identical to other tools.
+  const ref = filesFor(name);
+  const sync = () => {
+    syncHiddenInput(input, ref);
+    renderCoverPairCell(cell, name, icon, placeholder);
+  };
+  uploadRefreshers[name] = sync;
+  input.addEventListener("change", () => {
+    const f = input.files && input.files[0];
+    ref.length = 0;
+    if (f) ref.push({ id: ++uploadUid, file: f, status: "ready", msg: "", outSize: 0, outName: "" });
+    sync();
+  });
+
+  sync();
+  return cell;
+}
+
+function renderCoverPairCell(cell, name, icon, placeholder) {
+  const ref = filesFor(name);
+  const existingFile = cell.querySelector(".cpe-cell-file");
+  if (existingFile) existingFile.remove();
+  if (!ref.length) {
+    placeholder.hidden = false;
+    return;
+  }
+  placeholder.hidden = true;
+  const f = ref[0].file;
+  const file = el("div", { class: "cpe-cell-file" }, [
+    el("span", { class: "cpe-file-icon", text: icon }),
+    el("span", { class: "cpe-file-name", title: f.name, text: f.name }),
+    el("span", { class: "cpe-file-size", text: fmtBytes(f.size) }),
+    el("button", {
+      type: "button",
+      class: "cpe-file-remove",
+      title: `Remove ${f.name}`,
+      "aria-label": `Remove ${f.name}`,
+      text: "✕",
+      onclick: () => {
+        ref.length = 0;
+        uploadRefreshers[name] && uploadRefreshers[name]();
+      },
+    }),
+  ]);
+  cell.appendChild(file);
+}
+
+/**
+ * Add the 10 hidden `<input type="file">` elements for the cover-pairs
+ * tool to the form. The visual editor (mountCoverPairsEditor) drives
+ * their `.files` programmatically via the same filesFor() ref shared
+ * with the rest of the app, so submission "just works".
+ */
+function installCoverPairsHiddenInputs() {
+  const form = $("#toolForm");
+  if (!form) return;
+  for (const def of toolMeta.inputs || []) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.name = def.name;
+    input.accept = def.accept || "*";
+    input.style.display = "none";
+    input.setAttribute("data-cpe-helper", def.name);
+    form.appendChild(input);
+    // The editor's pill button sets `.files` on these inputs and dispatches
+    // a change event, so we mirror that into the shared filesFor() store.
+    input.addEventListener("change", () => {
+      const ref = filesFor(def.name);
+      const f = input.files && input.files[0];
+      ref.length = 0;
+      if (f) ref.push({
+        id: ++uploadUid,
+        file: f,
+        status: "ready",
+        msg: "",
+        outSize: 0,
+        outName: "",
+      });
+      uploadRefreshers[def.name] && uploadRefreshers[def.name]();
+    });
+  }
 }
 
 function wireVisualEditor() {
@@ -1203,6 +1971,7 @@ function renderUploadList(listEl, hiddenInput, name, accept) {
         class: "remove-btn",
         title: "Remove",
         "aria-label": `Remove ${item.file.name}`,
+        text: "✕",
         onclick: () => {
           if (busyProcessing) return;
           const arr = filesFor(name);
@@ -1382,6 +2151,16 @@ async function renderTool() {
   $("#toolInputs").replaceChildren(
     ...(toolMeta.inputs || []).map(buildUploader),
   );
+
+  // Cover-pairs editor (Add Cover Art / MP4) draws its own compact 5-row
+  // audio+image picker inside the visual editor slot, and manages the 10
+  // hidden file inputs directly. Skip the default per-input uploader UI
+  // for this tool — the rows are far less work to fill in.
+  const editorKind = ((toolMeta.fields || []).find((f) => f.name === "_editor") || {}).editor?.kind;
+  if (editorKind === "cover-pairs") {
+    $("#toolInputs").replaceChildren();
+    installCoverPairsHiddenInputs();
+  }
 
   // Single-upload tools prepare the multi-output ("batch") panel up front.
   if (uploadMode()) setupResultPanel();
@@ -1611,6 +2390,76 @@ function buildZip(entries) {
   return new Blob(parts, { type: "application/zip" });
 }
 
+/**
+ * Read a stored (method 0) PKZIP archive back into entries.
+ * Returns { name, blob } for each file.  UTF-8 filenames only.
+ * Throws on malformed input.
+ */
+async function readZip(blob) {
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+
+  // Walk back to find End-of-Central-Directory (max 64KiB + 22B).
+  const eocdSize = 22;
+  const maxBack = Math.min(buf.length, 0xffff + eocdSize);
+  let eocd = -1;
+  for (let i = buf.length - eocdSize; i >= buf.length - maxBack && i >= 0; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error("ZIP: end-of-central-directory not found.");
+
+  const total = dv.getUint16(eocd + 10, true);
+  const cdSize = dv.getUint32(eocd + 12, true);
+  const cdStart = dv.getUint32(eocd + 16, true);
+
+  const entries = [];
+  let p = cdStart;
+  for (let i = 0; i < total; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) {
+      throw new Error(`ZIP: bad central-dir entry at ${p}.`);
+    }
+    const flags = dv.getUint16(p + 8, true);
+    const method = dv.getUint16(p + 10, true);
+    const compSize = dv.getUint32(p + 20, true);
+    const uncompSize = dv.getUint32(p + 24, true);
+    const nameLen = dv.getUint16(p + 28, true);
+    const extraLen = dv.getUint16(p + 30, true);
+    const cmtLen = dv.getUint16(p + 32, true);
+    const localOff = dv.getUint32(p + 42, true);
+    const name = new TextDecoder("utf-8").decode(
+      buf.slice(p + 46, p + 46 + nameLen),
+    );
+    p += 46 + nameLen + extraLen + cmtLen;
+
+    // Sanity-check the local header.
+    if (dv.getUint32(localOff, true) !== 0x04034b50) {
+      throw new Error(`ZIP: bad local header for ${name}.`);
+    }
+    const lhNameLen = dv.getUint16(localOff + 26, true);
+    const lhExtraLen = dv.getUint16(localOff + 28, true);
+    const dataStart = localOff + 30 + lhNameLen + lhExtraLen;
+
+    // We only support stored (method 0) — matches buildServerZip.
+    if (method !== 0) {
+      throw new Error(
+        `ZIP: entry "${name}" uses method ${method}, only stored (0) is supported.`,
+      );
+    }
+    if (flags & 0x1) {
+      throw new Error(`ZIP: entry "${name}" is encrypted, cannot read.`);
+    }
+
+    entries.push({
+      name,
+      blob: new Blob([buf.slice(dataStart, dataStart + uncompSize)]),
+    });
+  }
+  return entries;
+}
+
 /** Programmatic click-to-save for generated blobs. */
 function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -1833,6 +2682,27 @@ function pushResultItem(blob, srcName, ext) {
 function clearResults() {
   for (const r of resultItems) if (r.url) URL.revokeObjectURL(r.url);
   resultItems.length = 0;
+  lastZipBlob = null;
+  lastZipName = null;
+  renderResults();
+}
+
+/** Remove a single row from the results list.  Called by the per-row
+ *  ✕ button.  Revokes the item's blob URL so we don't leak memory,
+ *  drops it from `resultItems`, and invalidates the cached "Download
+ *  all" ZIP — the next ZIP will only contain whatever is still in
+ *  the list, so a removed file can never sneak back in via the
+ *  archive. */
+function removeResult(idx) {
+  if (idx < 0 || idx >= resultItems.length) return;
+  const r = resultItems[idx];
+  if (r && r.url) URL.revokeObjectURL(r.url);
+  resultItems.splice(idx, 1);
+  // The cached archive was built from the previous list, so it may
+  // include the row we just removed.  Throw it away and force a
+  // rebuild on the next "Download all" click.
+  lastZipBlob = null;
+  lastZipName = null;
   renderResults();
 }
 
@@ -1842,6 +2712,20 @@ async function downloadAllZip() {
   if (!items.length || zipBusy) return;
   zipBusy = true;
   renderResults();
+  // Multi-output path: the server already produced an archive, just
+  // hand the same bytes back. No re-bundling needed.
+  if (lastZipBlob) {
+    try {
+      triggerDownload(lastZipBlob, lastZipName || "results.zip");
+      setStatus(
+        `📦 ZIP ready — ${items.length} file${items.length > 1 ? "s" : ""} inside.`,
+      );
+    } finally {
+      zipBusy = false;
+      renderResults();
+    }
+    return;
+  }
   setStatus(`📦 Zipping ${items.length} file(s)…`);
   try {
     const entries = [];
@@ -1888,7 +2772,7 @@ function renderResults() {
       class: "results-summary",
       text: `${items.length} output${items.length > 1 ? "s" : ""} · ${fmtBytes(totalBytes)} total`,
     }),
-    ...items.map((r) => {
+    ...items.map((r, idx) => {
       const rExt = (r.name.split(".").pop() || "").toLowerCase();
       const canPreview = r.url && isPlayableExt(rExt);
       // Inline media preview (audio / video / gif) — placed *above* the
@@ -1917,62 +2801,81 @@ function renderResults() {
               })
         : null;
       return el("div", { class: "r-row" }, [
-        el("span", { class: "f-icon", text: oIcon }),
-        el("div", { class: "f-meta" }, [
-          (canPreview
-            ? el("a", {
-                class: "f-name link-like",
-                href: r.url,
-                target: "_blank",
-                rel: "noopener",
-                title: `Open ${r.name} in a new tab`,
-                text: r.name,
-              })
-            : el("div", { class: "f-name", title: r.name, text: r.name })),
-          el("div", { class: "f-size", text: fmtBytes(r.blob.size) }),
+        // Header strip: icon, name + size, download button. Keeping the
+        // three on one line and the preview on its own line below is
+        // what fixes the "everything is jammed next to the download"
+        // alignment in the previous layout.
+        el("div", { class: "r-row-head" }, [
+          el("span", { class: "f-icon", text: oIcon }),
+          el("div", { class: "f-meta" }, [
+            (canPreview
+              ? el("a", {
+                  class: "f-name link-like",
+                  href: r.url,
+                  target: "_blank",
+                  rel: "noopener",
+                  title: `Open ${r.name} in a new tab`,
+                  text: r.name,
+                })
+              : el("div", { class: "f-name", title: r.name, text: r.name })),
+            el("div", { class: "f-size", text: fmtBytes(r.blob.size) }),
+          ]),
+          el("a", {
+            class: "btn btn-sm btn-primary",
+            href: r.url,
+            download: r.name,
+            text: "⬇️ Download",
+          }),
+          // Per-row remove: drops just this result.  Distinct from
+          // the inline-preview "✕" (which only hides the player)
+          // and from the global "🧹 Clear results" button.
+          el("button", {
+            type: "button",
+            class: "r-remove-btn",
+            title: `Remove ${r.name}`,
+            "aria-label": `Remove ${r.name}`,
+            text: "✕",
+            onclick: () => removeResult(idx),
+          }),
         ]),
-        el("a", {
-          class: "btn btn-sm btn-primary",
-          href: r.url,
-          download: r.name,
-          text: "⬇️ Download",
-        }),
-        // Preview sits below the row's name + download — it expands the
-        // row to full width so the player doesn't get squashed.
+        // Preview area sits in its own column so the video / audio /
+        // gif player has the full row width to render in.
         ...(preview
           ? [
-              el("div", { class: "r-preview-wrap" }, [
-                preview,
+              el("div", { class: "r-row-preview" }, [
+                el("div", { class: "r-preview-wrap" }, [
+                  preview,
+                  el("button", {
+                    type: "button",
+                    class: "r-preview-toggle",
+                    title: "Hide preview",
+                    text: "✕",
+                    onclick: (e) => {
+                      const wrap = e.currentTarget.parentElement;
+                      const previewArea = wrap.parentElement;
+                      wrap.hidden = true;
+                      const btn = previewArea.querySelector(".r-preview-show");
+                      if (btn) btn.hidden = false;
+                    },
+                  }),
+                ]),
                 el("button", {
                   type: "button",
-                  class: "r-preview-toggle",
-                  title: "Hide preview",
-                  text: "✕",
+                  class: "r-preview-show btn btn-sm",
+                  hidden: "",
+                  text: "▶ Show preview",
                   onclick: (e) => {
-                    const wrap = e.currentTarget.parentElement;
-                    const row = wrap.parentElement;
-                    wrap.hidden = true;
-                    const btn = row.querySelector(".r-preview-show");
-                    if (btn) btn.hidden = false;
+                    const previewArea = e.currentTarget.parentElement;
+                    const wrap = previewArea.querySelector(".r-preview-wrap");
+                    if (wrap) {
+                      wrap.hidden = false;
+                      const media = wrap.querySelector("video, audio");
+                      if (media) media.load?.();
+                    }
+                    e.currentTarget.hidden = true;
                   },
                 }),
               ]),
-              el("button", {
-                type: "button",
-                class: "r-preview-show btn btn-sm",
-                hidden: "",
-                text: "▶ Show preview",
-                onclick: (e) => {
-                  const row = e.currentTarget.parentElement;
-                  const wrap = row.querySelector(".r-preview-wrap");
-                  if (wrap) {
-                    wrap.hidden = false;
-                    const media = wrap.querySelector("video, audio");
-                    if (media) media.load?.();
-                  }
-                  e.currentTarget.hidden = true;
-                },
-              }),
             ]
           : []),
       ]);
@@ -2022,9 +2925,14 @@ async function submitForm(ev) {
 async function submitSingle(ev) {
   const fd = new FormData(ev.target);
 
+  // Required-file check. Inputs whose name ends in "1" are mandatory
+  // (e.g. "audio1" / "image1" for the cover-art tool); the rest are
+  // optional, so we only complain if their slot is empty AND any later
+  // slot is filled (otherwise just skip). The form uses "audio1" as the
+  // anchor; everything above is required, everything below is optional.
   for (const def of toolMeta.inputs || []) {
     const files = fd.getAll(def.name).filter((f) => f.size > 0);
-    if (!files.length) {
+    if (!files.length && /1$/.test(def.name)) {
       setStatus(`Please choose ${def.label.toLowerCase()}.`, true);
       return;
     }
@@ -2059,7 +2967,59 @@ async function submitSingle(ev) {
     const filename =
       m ? m[1] : `processed-${Date.now()}.${toolMeta.defaultExt || "bin"}`;
 
-    showResult(blob, filename);
+    // Multi-output tools (e.g. Add Cover Art) get a ZIP back from the
+    // server. Unzip it in the browser and render each entry as its own
+    // result row, with the original archive still available via the
+    // "Download all as ZIP" button at the bottom of the result panel.
+    const looksLikeZip =
+      /\.zip$/i.test(filename) ||
+      (blob.type || "").toLowerCase().includes("zip");
+
+    if (looksLikeZip) {
+      setStatus("Unpacking…");
+      let entries;
+      try {
+        entries = await readZip(blob);
+      } catch (e) {
+        throw new Error(`Could not read the result archive: ${e.message}`);
+      }
+      if (!entries.length) {
+        throw new Error(
+          "The server returned an empty archive — no output was produced.",
+        );
+      }
+      // Replace the previous single-output preview, if any.
+      if (lastBlobUrl) {
+        URL.revokeObjectURL(lastBlobUrl);
+        lastBlobUrl = "";
+      }
+      // Replace any prior batch list.
+      for (const r of resultItems) if (r.url) URL.revokeObjectURL(r.url);
+      resultItems.length = 0;
+
+      for (const e of entries) {
+        resultItems.push({
+          name: e.name,
+          blob: e.blob,
+          url: URL.createObjectURL(e.blob),
+          err: null,
+        });
+      }
+      // Stash the original archive so downloadAllZip() can re-emit it
+      // as-is without re-bundling.
+      lastZipBlob = blob;
+      lastZipName = filename;
+      renderResults();
+      setProgress(100);
+      setStatus(
+        entries.length === 1
+          ? "Done ✔ — ready to download."
+          : `Done ✔ — ${entries.length} file${entries.length > 1 ? "s" : ""} inside the ZIP.`,
+        false,
+      );
+    } else {
+      showResult(blob, filename);
+    }
   } catch (err) {
     setStatus(`✖ ${err.message}`, true);
     setProgress(0);
