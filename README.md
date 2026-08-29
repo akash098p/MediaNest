@@ -33,6 +33,11 @@ Everything runs locally through the bundled Node server — files never leave yo
   </video>
 </div>
 
+| Demo 1 | Demo 2 |
+| :---: | :---: |
+| <video src="https://github.com/user-attachments/assets/3705fc35-2721-425a-86ac-4e6752c231d9" width="100%"></video> | <video src="https://github.com/user-attachments/assets/dc9a47f6-c0a7-4cb6-8e44-220fa9702f63" width="100%"></video> |
+
+
 
 ---
 
