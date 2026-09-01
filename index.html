@@ -53,6 +53,7 @@
   #mediaDropZone:hover, #mediaDropZone:focus-within { background: rgba(0,120,212,0.14); border-color: var(--primary-light); }
   #mediaDropZone span { font-size: 1rem; font-weight: 700; line-height: 1.4; }
   #mediaDropZone small { color: var(--text-secondary); }
+  #mediaDropIcon { margin-bottom: 16px; }
   #mediaInput { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
   button, input, select, textarea { font: inherit; outline: none; }
   button { border: 1px solid transparent; background: rgba(255,255,255,0.08); color: var(--text-primary); transition: all 0.2s ease; }
@@ -230,6 +231,7 @@
 <h2 id="mediaLibraryHeading">Media Library</h2>
 
 <label id="mediaDropZone" class="drop-zone" for="mediaInput" tabindex="0" aria-describedby="mediaDropHint">
+  <svg id="mediaDropIcon" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V8a4 4 0 014-4h2a4 4 0 014 4v8m-6 4h6a2 2 0 002-2v1a2 2 0 01-2 2h-6a2 2 0 01-2-2v-1a2 2 0 012-2h6"></path></svg>
   <span>Drag & drop audio or video files here</span>
   <small id="mediaDropHint">Or click to browse your computer</small>
   <input type="file" multiple id="mediaInput" accept="audio/*,video/*" aria-label="Select audio or video files to import">
