@@ -739,7 +739,8 @@ UPLOAD ICON
 =========================================================*/
 
 .upload-icon {
-  font-size: 52px;
+  width: 52px;
+  height: 52px;
 
   margin-bottom: 20px;
 
