@@ -374,13 +374,13 @@ async function mountVisualEditor() {
     return;
   }
 
-  // Audio-effect editors: volume, speed, and audio-transition all use a shared
-  // Web-Audio live-preview pattern. The source file is decoded into an
-  // AudioBuffer, piped through the effect nodes, and streamed to a hidden
+  // Audio-effect editors: volume, speed, pitch, and audio-transition all use
+  // a shared Web-Audio live-preview pattern. The source file is decoded into
+  // an AudioBuffer, piped through the effect nodes, and streamed to a hidden
   // <audio> element for playback. The effect parameters are also written
   // back into the hidden form fields so the server can run the real ffmpeg
   // on "Start download".
-  if (cfg.kind === "volume" || cfg.kind === "speed" || cfg.kind === "audio-transition") {
+  if (cfg.kind === "volume" || cfg.kind === "speed" || cfg.kind === "audio-transition" || cfg.kind === "pitch") {
     // These editors only make sense for audio inputs. We need the audioEl
     // from mountVisualEditor's loading stage above — it may be a <video>
     // element if the user dropped a video file (which the server would still
@@ -1199,6 +1199,118 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg) {
 /* Audio-effect live-preview editor (volume / speed / audio-transition) */
 /* ------------------------------------------------------------------ */
 
+/*
+ * Real-time, tempo-preserving pitch shifter used by the "pitch" preview.
+ * Web Audio has no native pitch-shift node, so this AudioWorklet does
+ * granular overlap-add: u = t·ratio walks a "stretched" copy of the input;
+ * stretched grain g covers [g·H, g·H + 2H) and reads the source at
+ * g·(H/ratio) + τ (τ = u − g·H).  Two grains overlap 50% with Hann
+ * windows that sum to 1 (COLA), so ratio = 1 is a perfect bypass, and the
+ * net source consumption is exactly 1 sample per output sample — duration
+ * is preserved while each grain replays at `ratio` (the pitch change).
+ * A fixed latency of N samples covers the maximum read-ahead
+ * (≤ 2H − H/ratio ≤ N for ratio ∈ [0.5, 2], i.e. ±12 semitones).
+ */
+const PITCH_WORKLET_CODE = `
+class PitchShiftProcessor extends AudioWorkletProcessor {
+  static get parameterDescriptors() {
+    return [{ name: "ratio", defaultValue: 1, minValue: 0.5, maxValue: 2, automationRate: "k-rate" }];
+  }
+  constructor() {
+    super();
+    this.N = 4096;          // grain length in samples (~93 ms @ 44.1 kHz)
+    this.H = this.N >> 1;   // grain hop — 50% overlap
+    this.L = this.N;        // fixed output latency (covers max read-ahead)
+    this.cap = 1 << 15;     // ring buffer capacity (32768 samples/channel)
+    this.mask = this.cap - 1;
+    this.buf = [];          // one ring buffer per channel
+    this.wc = 0;            // absolute input samples written
+    this.oc = 0;            // absolute output samples emitted
+  }
+  _read(b, pos, m) {
+    const i0 = Math.floor(pos);
+    const fr = pos - i0;
+    const a = b[i0 & m];
+    const c = b[(i0 + 1) & m];
+    return a + (c - a) * fr;
+  }
+  process(inputs, outputs, params) {
+    const out = outputs[0];
+    const nCh = out.length;
+    const n = out[0].length;
+    if (!nCh || !n) return true;
+    const inp = inputs[0] || [];
+    const raw = params.ratio.length ? params.ratio[0] : 1;
+    const r = Math.min(2, Math.max(0.5, raw));   // ±12 st range, defensively clamped
+    while (this.buf.length < nCh) this.buf.push(new Float32Array(this.cap));
+
+    // 1) Stage the incoming block (zeros keep the clock moving when muted).
+    for (let ch = 0; ch < nCh; ch++) {
+      const b = this.buf[ch];
+      const src = inp.length ? inp[ch % inp.length] || null : null;  // mono → both
+      for (let i = 0; i < n; i++) b[(this.wc + i) & this.mask] = src ? src[i] : 0;
+    }
+    this.wc += n;
+
+    // 2) Emit output for absolute time t = oc − L (input minus latency).
+    //
+    //    Correct granular OLA: u = t·ratio walks the STRETCHED timeline;
+    //    grain g covers stretched positions [g·H, g·H + 2H) and reads the
+    //    source at (g·H/ratio + τ) with τ = u − g·H.  Two grains (g and
+    //    g−1) overlap with Hann windows that sum to 1, and the net source
+    //    consumption is exactly 1 sample per output sample — duration is
+    //    preserved while every grain is replayed at rate "ratio" (pitch).
+    const N = this.N, H = this.H, m = this.mask;
+    const k = (2 * Math.PI) / N;
+    for (let ch = 0; ch < nCh; ch++) {
+      const b = this.buf[ch];
+      const o = out[ch];
+      for (let i = 0; i < n; i++) {
+        const t = this.oc + i - this.L;
+        if (t < 0) { o[i] = 0; continue; }
+        const u = t * r;
+        const g = Math.floor(u / H);
+        const tau = u - g * H;                       // fractional offset inside stretched grain
+        const Ha = H / r;                            // source hop per grain
+        const wA = 0.5 - 0.5 * Math.cos(k * tau);    // Hann window of the current grain
+        let v = 0;
+        const xA = g * Ha + tau;                     // current grain read position
+        if (xA >= 0) v += wA * this._read(b, xA, m);
+        const xB = (g - 1) * Ha + tau + H;           // previous grain, half a window earlier
+        if (xB >= 0) v += (1 - wA) * this._read(b, xB, m);
+        o[i] = v;
+      }
+    }
+    this.oc += n;
+    return true;
+  }
+}
+registerProcessor("pitch-shift", PitchShiftProcessor);
+`;
+
+/** Load the pitch-shift AudioWorklet into `ctx`; resolves to a node or null. */
+async function _createPitchNode(ctx) {
+  try {
+    if (!ctx.audioWorklet) return null;
+    const url = URL.createObjectURL(
+      new Blob([PITCH_WORKLET_CODE], { type: "application/javascript" }),
+    );
+    try {
+      await ctx.audioWorklet.addModule(url);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    return new AudioWorkletNode(ctx, "pitch-shift", {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+    });
+  } catch (err) {
+    console.warn("Pitch preview worklet unavailable:", err);
+    return null;
+  }
+}
+
 let _wac = null; // shared Web Audio state
 
 function _wacCleanup() {
@@ -1221,7 +1333,9 @@ function _wacPlay(state, offset = 0) {
   const src = ctx.createBufferSource();
   src.buffer = state.buffer;
   src.playbackRate.value = state.playbackRate || 1;
-  src.connect(state.gainNode);
+  // "pitch" kind routes through the pitch-shift worklet when it loaded;
+  // every other kind connects straight to the shared gain stage.
+  src.connect(state.pitchNode || state.gainNode);
   state.gainNode.connect(ctx.destination);
   // Clamp offset so the user can't start past the end.
   const safeOffset = Math.max(0, Math.min(offset, state.buffer.duration));
@@ -1252,7 +1366,7 @@ function _scheduleFadeGain(state, now) {
   }
 }
 
-function mountAudioEffectEditor(slot, mediaEl, cfg) {
+async function mountAudioEffectEditor(slot, mediaEl, cfg) {
   const form = $("#toolForm");
   if (!form) return;
   if (!mediaEl?.src) {
@@ -1274,6 +1388,7 @@ function mountAudioEffectEditor(slot, mediaEl, cfg) {
     ctx: audioCtx, gainNode,
     buffer: null, src: null,
     playbackRate: 1, fadeIn: 0, fadeOut: 0,
+    pitchNode: null,          // AudioWorkletNode, only for the "pitch" kind
     loaded: false,
     playing: false,           // is the source currently producing sound?
     _srcStart: 0,              // ctx.currentTime at which src started, used to interpolate UI time
@@ -1281,6 +1396,16 @@ function mountAudioEffectEditor(slot, mediaEl, cfg) {
   };
   _wacCleanup();
   _wac = state;
+
+  // The pitch preview needs a real-time shifter — Web Audio has no native
+  // tempo-preserving pitch node, so a small granular AudioWorklet provides
+  // it. If the browser lacks AudioWorklet the preview degrades to dry
+  // (unshifted) playback and the UI says so; the ffmpeg export that runs
+  // on "Start download" is unaffected either way.
+  if (kind === "pitch") {
+    state.pitchNode = await _createPitchNode(audioCtx);
+    if (state.pitchNode) state.pitchNode.connect(gainNode);
+  }
 
   fetch(mediaEl.src)
     .then((r) => r.arrayBuffer())
@@ -1324,8 +1449,8 @@ function _buildAudioEditorUI(card, state, cfg, onFadeChange) {
   };
 
   // Header.
-  const iconMap = { volume: "🔊", speed: "⏱", "audio-transition": "🌊" };
-  const labelMap = { volume: "Volume", speed: "Audio Speed", "audio-transition": "Fade In / Fade Out" };
+  const iconMap = { volume: "🔊", speed: "⏱", "audio-transition": "🌊", pitch: "🎼" };
+  const labelMap = { volume: "Volume", speed: "Audio Speed", "audio-transition": "Fade In / Fade Out", pitch: "Pitch" };
   card.appendChild(el("div", { class: "vae-header" }, [
     el("span", { class: "vae-header-icon", text: iconMap[kind] || "🎵" }),
     el("span", { class: "vae-header-label", text: labelMap[kind] || "Audio Effect" }),
@@ -1518,6 +1643,43 @@ function _buildAudioEditorUI(card, state, cfg, onFadeChange) {
     updateDur(initial);
     row.appendChild(durLabel);
     sliders.appendChild(row);
+  }
+
+  // Pitch slider — shifts pitch in semitones while preserving tempo.
+  // Live preview goes through the granular pitch-shift AudioWorklet;
+  // changing the ratio glides smoothly without restarting playback.
+  if (kind === "pitch") {
+    const initial = formVal("semitones", 2);
+    state.semitones = initial;
+    writeVal("semitones", initial);
+    const setRatio = (st) => {
+      const ratio = Math.pow(2, st / 12);   // 1 semitone = 2^(1/12)
+      if (state.pitchNode) {
+        const p = state.pitchNode.parameters.get("ratio");
+        p?.setTargetAtTime(ratio, state.ctx.currentTime, 0.02);
+      }
+    };
+    setRatio(initial);
+    const row = _makeSliderRow({
+      label: "Pitch", min: -12, max: 12, step: 0.5, value: initial,
+      displayVal: (v) => (v > 0 ? "+" : "") + v.toFixed(1) + " st",
+      onInput(val) {
+        state.semitones = val;
+        setRatio(val);
+        writeVal("semitones", val);
+      },
+    });
+    row.appendChild(el("span", {
+      class: "vae-dur-hint muted-dim small",
+      text: "Tempo preserved — same length",
+    }));
+    sliders.appendChild(row);
+    if (!state.pitchNode) {
+      sliders.appendChild(el("p", {
+        class: "small muted-dim",
+        text: "⚠ Live pitch preview is not supported in this browser — playback stays unshifted. The exported file is still pitch-shifted correctly.",
+      }));
+    }
   }
 
   // Fade-in / Fade-out sliders.
