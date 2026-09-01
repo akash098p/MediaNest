@@ -676,7 +676,8 @@ footer {
   opacity: 0.55;
   pointer-events: none;
 }
-.dz-icon { font-size: 26px; margin-bottom: 6px; }
+.dz-icon { margin-bottom: 6px; }
+.dz-icon svg { width: 32px; height: 32px; }
 .dz-main { font-weight: 700; color: var(--text); }
 .dz-sub { margin-top: 3px; font-size: 12.5px; }
 
@@ -913,7 +914,8 @@ footer {
   color: var(--text);
   background: rgba(79, 124, 255, 0.06);
 }
-.cpe-btn .cpe-btn-icon { font-size: 15px; flex-shrink: 0; }
+.cpe-btn .cpe-btn-icon { width: 18px; height: 18px; flex-shrink: 0; }
+.cpe-btn .cpe-btn-icon svg { width: 18px; height: 18px; }
 .cpe-btn .cpe-btn-text { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
 
 /* Filled state */
