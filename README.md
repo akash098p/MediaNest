@@ -17,7 +17,7 @@ MediaNest ships as two apps served by one tiny Node.js server:
 | App | Entry | What it is |
 |---|---|---|
 | 🎞️ **MediaNest Editor** | `/index.html` | A browser-based timeline editor with recording, effects, live visualizers and project files |
-| 🧰 **MediaNest Tools** | `/tools/index.html` | A registry-driven portal of **31 one-purpose FFmpeg tools** for audio, video and GIF work |
+| 🧰 **MediaNest Tools** | `/tools/index.html` | A registry-driven portal of **33 one-purpose FFmpeg tools** for audio, video and GIF work |
 
 Everything runs locally through the bundled Node server — files never leave your computer, and both apps work fully offline once set up.
 
@@ -27,7 +27,7 @@ Everything runs locally through the bundled Node server — files never leave yo
 
 - 🔒 **100% local & private** — uploads are staged in your OS temp folder and deleted when the job finishes
 - ⚡ **Zero build step** — plain HTML/CSS/JS front-end, one Express back-end, no bundlers
-- 🎛️ **31 tools out of the box** — convert, compress, trim, merge, mix, clean up, resize, rotate, flip, reverse, re-time, GIF-fy…
+- 🎛️ **33 tools out of the box** — convert, compress, trim, merge, mix, clean up, resize, rotate, flip, reverse, re-time, pitch-shift, GIF-fy…
 - 🤖 **Smart quality defaults** — bitrates mirror the source file, so conversions never silently balloon in size
 - 🖼️ **Registry-driven UI** — every tool's form (inputs, dropdowns, limits) is generated from `server/tools.js`
 - 🎥 **Real editor** — multi-track timeline, clip ops, mic/system/screen recording, spectrum & waveform views
@@ -87,9 +87,9 @@ How jobs are handled:
 3. The tool's `build()` produces an ffmpeg argument list; output goes back inline
 4. Temp inputs and outputs are cleaned up automatically after every request
 
-## 🛠️ All 31 Tools
+## 🛠️ All 33 Tools
 
-### 🔊 Audio (13)
+### 🔊 Audio (14)
 
 | Tool | What it can do | Key options |
 |---|---|---|
@@ -99,6 +99,7 @@ How jobs are handled:
 | **Audio Transition (Fade)** | Smooth fade-in / fade-out transitions, auto-timed to track length | Fade-in & fade-out seconds |
 | **Merge Audio (Concatenate)** | Join multiple files end-to-end into one track | Multi-select, plays in the chosen order |
 | **Change Audio Speed** | Speed up or slow down audio **without changing pitch** | 0.25× – 4× speed |
+| **Change Pitch** | Shift the pitch up/down in semitones **while keeping the tempo** — high quality | ±12 semitones · rubberband (music / voice-formant) or classic resample method |
 | **Reverse Audio** | Play an audio file backwards — every sample is mirrored end-to-end | — |
 | **Trim Audio** | Extract a segment losslessly (stream copy) | Start & end in `mm:ss` or seconds |
 | **Increase / Decrease Volume** | Raise or lower loudness | Gain from −30 dB to +30 dB |
@@ -107,7 +108,7 @@ How jobs are handled:
 | **Remove Silence** | Strip leading/trailing silence and long dead gaps | Threshold (dB) + minimum gap length |
 | **Repair M4A** | Rebuild truncated or damaged M4A/MP4 audio by remuxing | — |
 
-### 🎥 Video (12)
+### 🎥 Video (13)
 
 | Tool | What it can do | Key options |
 |---|---|---|
@@ -121,6 +122,7 @@ How jobs are handled:
 | **Rotate Video** | Straighten sideways phone clips | 90° / 180° / 270° |
 | **Flip Video** | Mirror a video horizontally, vertically, or both — great for selfies | Horizontal / Vertical / Both |
 | **Reverse Video** | Play a video backwards — both picture and soundtrack are reversed end-to-end | — |
+| **Speed Video** | Speed up or slow down a clip — picture and soundtrack stay in sync | 0.25× – 4× · keep sound (pitch preserved) or mute |
 | **Trim Video** | Keep only a start→end slice | Timestamps |
 | **Merge Videos** | Concatenate multiple clips into a single file | Multi-select order |
 
@@ -199,7 +201,7 @@ Media-Nest/
     ├── server.js         # Express app: static hosting + JSON API
     ├── package.json      # express ^4, multer ^2 (no other deps!)
     ├── lib/ffmpeg.js     # ffmpeg/ffprobe wrappers + media probing
-    └── tools.js          # ★ The 31-tool registry — edit me to add tools
+    └── tools.js          # ★ The 33-tool registry — edit me to add tools
 ```
 
 ---
