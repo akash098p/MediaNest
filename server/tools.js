@@ -267,6 +267,79 @@ tools.push({
 });
 
 tools.push({
+  id: "change-pitch",
+  name: "Change Pitch",
+  group: "Audio",
+  // TODO: swap in a dedicated icon (e.g. "icons/change pitch.png") once added.
+  icon: "icons/audio compressor.png",
+  description: "Shift the pitch up or down in semitones while keeping the original tempo — high quality.",
+  inputs: [{ name: "audio", label: "Audio file", accept: "audio/*" }],
+  fields: [
+    // Frontend mounts a live Web-Audio preview (granular pitch worklet,
+    // tempo-preserving) and writes the chosen semitones back into the
+    // field below. The server only ever sees the plain number — the same
+    // shape as the change-speed tool.
+    { name: "_editor", label: "Editor", type: "editor",
+      editor: { kind: "pitch", emits: ["semitones"] } },
+    { name: "semitones", label: "Pitch shift (semitones)", type: "number", default: 2, min: -12, max: 12, step: 0.5,
+      note: "+12 = one octave up, −12 = one octave down. 0 leaves the pitch untouched." },
+    { name: "method", label: "Method", type: "select", default: "rubberband", options: [
+        { value: "rubberband", text: "High quality (rubberband)" },
+        { value: "rubberband-voice", text: "High quality — voice (preserves formants)" },
+        { value: "standard", text: "Standard (faster, works on any FFmpeg)" },
+      ] },
+  ],
+  defaultExt: "mp3",
+  build(ctx) {
+    const audio = ctx.file("audio");
+    let st = Number(ctx.param("semitones"));
+    if (!Number.isFinite(st)) st = 0;
+    st = Math.max(-12, Math.min(12, st));
+    const ext = sameExt(audio);
+
+    // Nothing to shift — remux instead of re-encoding.
+    if (Math.abs(st) < 0.005) {
+      return { args: [I(audio), "-c", "copy"], ext };
+    }
+
+    // 1 semitone = 2^(1/12) (equal temperament).
+    const ratio = Math.pow(2, st / 12);
+    const method = ctx.param("method") || "rubberband";
+
+    let filter;
+    if (method === "standard") {
+      // Classic resample trick: replaying the samples at a new rate changes
+      // pitch AND speed (asetrate), so resample back to the original rate and
+      // undo the tempo change with atempo — leaving only the pitch shifted.
+      const sr = Math.max(8000, Math.round(ctx.media?.sampleRate || 44100));
+      const factors = [];
+      let r = 1 / ratio;
+      while (r > 2) { factors.push(2); r /= 2; }
+      while (r < 0.5) { factors.push(0.5); r *= 2; }
+      factors.push(Number(r.toFixed(4)));
+      filter =
+        `asetrate=${Math.round(sr * ratio)},aresample=${sr},` +
+        factors.map((f) => `atempo=${f}`).join(",");
+    } else {
+      // rubberband shifts pitch while leaving tempo untouched — the highest
+      // quality option (pitchq=quality). Voice mode additionally preserves
+      // the formants so a shifted voice still sounds like the same person.
+      const formant = method === "rubberband-voice" ? ":formant=preserved" : "";
+      filter = `rubberband=pitch=${ratio.toFixed(8)}:pitchq=quality${formant}`;
+    }
+
+    return {
+      args: [
+        I(audio),
+        "-af", filter,
+        ...audioRateArgs(ext, autoAudioBitrate(ctx.media)),
+      ],
+      ext,
+    };
+  },
+});
+
+tools.push({
   id: "reverse-audio",
   name: "Reverse Audio",
   group: "Audio",
@@ -1357,6 +1430,59 @@ tools.push({
       ],
       ext: "mp4",
     };
+  },
+});
+
+tools.push({
+  id: "speed-video",
+  name: "Speed Video",
+  group: "Video",
+  // TODO: swap in a dedicated icon (e.g. "icons/speed video.png") once added.
+  icon: "icons/change audio speed.png",
+  description: "Speed a video up or slow it down (0.25× – 4×) — picture and soundtrack stay in sync.",
+  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  fields: [
+    { name: "speed", label: "Speed factor", type: "number", default: 1.5, min: 0.25, max: 4, step: 0.05,
+      note: "2 = twice as fast (half the length) · 0.5 = half speed (twice the length)." },
+    { name: "audio", label: "Sound", type: "select", options: ["keep (pitch preserved)", "mute"] },
+  ],
+  defaultExt: "mp4",
+  build(ctx) {
+    const video = ctx.file("video");
+    let rate = Number(ctx.param("speed"));
+    if (!Number.isFinite(rate) || rate <= 0) rate = 1;
+    rate = Math.round(Math.max(0.25, Math.min(4, rate)) * 100) / 100;
+    const mute = String(ctx.param("audio") || "").startsWith("mute");
+
+    // Video timing: dividing PTS by the factor makes the clip play faster.
+    // Audio: the same atempo chain as the audio speed tool — it time-stretches
+    // (pitch stays natural) so picture and sound remain in sync. ffmpeg
+    // safely ignores -af when the source has no audio track.
+    const factors = [];
+    let r = rate;
+    while (r > 2) { factors.push(2); r /= 2; }
+    while (r < 0.5) { factors.push(0.5); r /= 0.5; }
+    factors.push(Number(r.toFixed(4)));
+
+    const args = [I(video), "-vf", `setpts=PTS/${rate}`];
+    if (mute) {
+      args.push("-an");
+    } else {
+      args.push("-af", factors.map((f) => `atempo=${f}`).join(","));
+    }
+    args.push(
+      "-c:v", "libx264",
+      "-preset", "medium",
+      "-pix_fmt", "yuv420p",
+      "-movflags", "+faststart",
+    );
+    if (!mute) {
+      args.push(
+        "-c:a", "aac",
+        ...audioRateArgs("aac", Math.min(192, Math.max(64, autoAudioBitrate(ctx.media)))),
+      );
+    }
+    return { args, ext: "mp4" };
   },
 });
 
