@@ -296,7 +296,7 @@ async function mountVisualEditor() {
         videoEl.addEventListener("loadedmetadata", resolve, { once: true });
         videoEl.addEventListener("loadeddata", resolve, { once: true });
         videoEl.addEventListener("error", () => reject(new Error("Could not read the audio file.")), { once: true });
-      });
+  });
       srcW = 1280; srcH = 720; // synthetic — trim ignores these
       drawable = videoEl;
     } else {
@@ -304,7 +304,7 @@ async function mountVisualEditor() {
       img.src = url;
       await new Promise((res, rej) => {
         img.onload = res; img.onerror = () => rej(new Error("Could not read the image."));
-      });
+  });
       srcW = img.naturalWidth; srcH = img.naturalHeight;
       drawable = img;
     }
@@ -1827,7 +1827,7 @@ function _buildCoverPairCell({ kind, pair, accept }) {
     class: "cpe-btn",
     title: `Choose ${kind} file for pair ${pair}`,
   }, [
-    el("span", { class: "cpe-btn-icon", text: icon }),
+    el("span", { class: "cpe-btn-icon", html: UPLOAD_SVG }),
     el("span", { class: "cpe-btn-text", text: `Choose ${kind}` }),
   ]);
   placeholder.addEventListener("click", () => input.click());
@@ -1937,7 +1937,7 @@ function installCoverPairsHiddenInputs() {
         msg: "",
         outSize: 0,
         outName: "",
-      });
+  });
       uploadRefreshers[def.name] && uploadRefreshers[def.name]();
     });
   }
@@ -1996,11 +1996,14 @@ function kindFor(accept) {
   return "media";
 }
 
+const UPLOAD_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V8a4 4 0 014-4h2a4 4 0 014 4v8m-6 4h6a2 2 0 002-2v1a2 2 0 01-2 2h-6a2 2 0 01-2-2v-1a2 2 0 012-2h6"></path></svg>';
+
 const KIND_META = {
-  video: { icon: "🎬", label: "video" },
-  audio: { icon: "🔊", label: "audio" },
-  image: { icon: "🖼️", label: "image" },
-  media: { icon: "📁", label: "file" },
+  video: { label: "video" },
+  audio: { label: "audio" },
+  image: { label: "image" },
+  media: { label: "file" },
 };
 
 function fileKind(f) {
@@ -2170,7 +2173,7 @@ function buildUploader(def) {
     role: "button",
     "aria-label": `Add ${noun}`,
   }, [
-    el("div", { class: "dz-icon", text: `${kmeta.icon}⬆️` }),
+    el("div", { class: "dz-icon", html: UPLOAD_SVG }),
     el("div", { class: "dz-main", text: `Drag & drop ${noun} here` }),
     el("div", {
       class: "dz-sub",
@@ -2212,7 +2215,7 @@ function buildUploader(def) {
         msg: "",
         outSize: 0,
         outName: "",
-      });
+  });
       added++;
     }
     uploadRefreshers[def.name] &&
@@ -2895,7 +2898,7 @@ async function downloadAllZip() {
       entries.push({
         name: r.name,
         data: new Uint8Array(await r.blob.arrayBuffer()),
-      });
+  });
     }
     const zipBlob = buildZip(entries);
     triggerDownload(zipBlob, batchZipName(items.length));
@@ -3255,7 +3258,7 @@ async function submitMultiForm() {
       const res = await fetch(`${API}/${encodeURIComponent(toolMeta.id)}`, {
         method: "POST",
         body: fd,
-      });
+  });
       if (!res.ok) {
         let msg = `Server error (${res.status})`;
         try {
