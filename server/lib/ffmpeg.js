@@ -158,6 +158,9 @@ function probeMedia(file) {
           totalBitrate: total,
           width: num(video && video.width) || 0,
           height: num(video && video.height) || 0,
+          // Needed by the pitch-shift tool's resample method (asetrate must
+          // be relative to the REAL source rate, not an assumed 44.1 kHz).
+          sampleRate: num(audio && audio.sample_rate) || 0,
         });
       } catch (err) {
         reject(err);
