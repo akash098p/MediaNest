@@ -219,9 +219,22 @@ function videoReady(v) {
   // not enough because some codecs (e.g. webm) report dimensions only
   // after `loadeddata`. Without this, videoWidth/videoHeight can read 0
   // and the editor falls into its "could not read dimensions" branch.
+  // NOTE: `muted` must be a real property (not just the attribute) or
+  // Chrome refuses to even load the frame while the element is parked
+  // off-screen — that was the "timeline plays, picture stays black" bug.
+  // `crossorigin` must NOT be set on a blob: URL — it makes the load fail
+  // silently in some browsers (another black-video cause).
+  try { v.muted = true; } catch (_) { /* ignore */ }
+  v.setAttribute("muted", "");
+  try { v.removeAttribute("crossorigin"); } catch (_) { /* ignore */ }
+  try { v.preload = "auto"; } catch (_) { /* ignore */ }
   return new Promise((resolve, reject) => {
-    if (v.readyState >= 2) return resolve();
-    const ok = () => resolve();
+    if (v.readyState >= 2 && v.videoWidth > 0) return resolve();
+    const ok = () => {
+      // loadeddata can fire before dimensions publish on slow decodes —
+      // wait one frame so videoWidth is real before the caller reads it.
+      requestAnimationFrame(() => resolve());
+    };
     v.addEventListener("loadeddata", ok, { once: true });
     v.addEventListener("canplay", ok, { once: true });
     v.addEventListener("error", () => reject(new Error("Could not read the video file.")), { once: true });
@@ -373,6 +386,10 @@ async function mountVisualEditor() {
         // MP4 preview (same pictures, H.264 640px) so the trim timeline and
         // crop/resize/rotate canvas still show the REAL video. The original
         // `file` is untouched: Start download still uploads/processes it.
+        //
+        // The ORIGINAL blob URL (`url`) is the broken file — REVOKE it now.
+        // Otherwise the dead <video> keeps an error state and its URL leaks.
+        try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
         if (videoEl && videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
         videoEl = null;
         slot.replaceChildren(
@@ -631,8 +648,30 @@ async function mountVisualEditor() {
     const fwdBtn = el("button", { type: "button", class: "vjs-frame-btn", title: "Next frame" }, ["frame ⟩"]);
     bar.append(backBtn, playBtn, scrubber, time, fwdBtn);
     // Move the live <video> element from the slot (where the loader placed it)
-    // into the timeline bar so playback works alongside the canvas.
+    // into the timeline bar so playback works alongside the canvas. The
+    // loader parks it off-screen via .vjs-frame-sink — that class must come
+    // off here or the video stays 1px/invisible (black box bug).
     if (videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
+    videoEl.classList.remove("vjs-frame-sink");
+    videoEl.removeAttribute("style");
+    try {
+      // Sound ON in the visible crop/resize/rotate bar: playback only ever
+      // starts from the user's Play click, so no autoplay-policy mute is
+      // needed. Clear both the property AND the attribute (the loader sets
+      // both to decode the first frame while parked off-screen) and restore
+      // full volume — otherwise the preview plays silently.
+      videoEl.muted = false;
+      videoEl.removeAttribute("muted");
+      try { videoEl.volume = 1; } catch (_) { /* ignore */ }
+      videoEl.controls = true;
+      videoEl.setAttribute("controls", "");
+      videoEl.preload = "auto";
+    } catch (_) { /* ignore */ }
+    // If the parked element never decoded a frame (Chrome suspends
+    // off-screen decodes), force a reload now that it is visible.
+    try {
+      if ((videoEl.readyState || 0) < 2) videoEl.load();
+    } catch (_) { /* ignore */ }
     bar.appendChild(videoEl);
     slot.appendChild(bar);
 
@@ -1142,8 +1181,16 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
     return;
   }
   const isAudio = mediaEl.tagName === "AUDIO";
-  // Let audio through while trimming (playback always starts on a click).
-  mediaEl.muted = false;
+  // Sound ON in the trim player: trim playback always starts from a user
+  // click (Play / timeline / handles), so no autoplay-policy mute is needed.
+  // The loader parks the element muted to decode the first frame while
+  // hidden — clear BOTH the property and the attribute here, otherwise the
+  // preview plays silently.
+  try {
+    mediaEl.muted = false;
+    mediaEl.removeAttribute("muted");
+    try { mediaEl.volume = 1; } catch (_) { /* ignore */ }
+  } catch (_) { /* ignore */ }
   mediaEl.pause();
 
   const form = $("#toolForm");
@@ -1186,13 +1233,96 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
     if (isAudio) {
       // Audio has no video frame — show only the native <audio> player
       // (with the scrubber / time row) and the timeline below it.
+      // Unmute: the loader parks it muted to decode while hidden, but the
+      // visible player must play sound (playback starts from a click).
+      try {
+        mediaEl.muted = false;
+        mediaEl.removeAttribute("muted");
+        try { mediaEl.volume = 1; } catch (_) { /* ignore */ }
+      } catch (_) { /* ignore */ }
       const audWrap = el("div", { class: "vjs-trim-audio" });
       audWrap.appendChild(mediaEl); // move the loaded <audio> into the player
       player.appendChild(audWrap);
     } else {
       const vidWrap = el("div", { class: "vjs-trim-video" });
+      // The loader parks the <video> off-screen via .vjs-frame-sink so it
+      // can decode while hidden. Inside the visible player that class must
+      // come off or the video stays 1px/invisible (black box bug).
+      mediaEl.classList.remove("vjs-frame-sink");
+      mediaEl.removeAttribute("style");
+      try {
+        // Sound ON in the visible trim player: the Play button is a
+        // user-gesture start, so we can unmute before playback without a
+        // mute toggle. The parked-off-screen <video> was created with
+        // muted set (decode-only, no audio needed while parked) — clear
+        // both the property AND the attribute so the visible player
+        // really is unmuted.
+        mediaEl.muted = false;
+        mediaEl.removeAttribute("muted");
+        try { mediaEl.volume = 1; } catch (_) { /* ignore */ }
+        mediaEl.controls = false;
+        mediaEl.removeAttribute("controls");
+        mediaEl.preload = "auto";
+        mediaEl.playsInline = true;
+        mediaEl.pause();
+        mediaEl.muted = false;
+        mediaEl.removeAttribute("muted");
+        try { mediaEl.volume = 1; } catch (_) { /* ignore */ }
+        mediaEl.controls = false;
+        mediaEl.removeAttribute("controls");
+        mediaEl.preload = "auto";
+        mediaEl.playsInline = true;
+        mediaEl.pause();
+      } catch (_) { /* ignore */ }
+      // If the parked element never decoded a frame (Chrome suspends
+      // off-screen decodes), reload now that it is visible, then paint the
+      // first in-point frame. NOTE: reload WHILE DETACHED would re-park the
+      // decode; append to the visible wrap first, then load().
       vidWrap.appendChild(mediaEl); // move the loaded <video> into the player
       player.appendChild(vidWrap);
+      // DO NOT call mediaEl.load() here: the loader already decoded the
+      // first frame, and load() resets readyState to HAVE_NOTHING. Seeking
+      // immediately after a reset is ignored on some browsers, leaving the
+      // player stuck on a black frame while the clock still runs. Just make
+      // sure the parked state is fully gone and gently seek to the in-point.
+      try {
+        mediaEl.classList.remove("vjs-frame-sink");
+        mediaEl.removeAttribute("style");
+        mediaEl.style.cssText = "";
+        mediaEl.preload = "auto";
+        mediaEl.playsInline = true;
+        mediaEl.pause();
+      } catch (_) { /* ignore */ }
+      // Paint the first in-point frame once a real frame is composited.
+      // `canplay` = a frame is ready to show (ends the black box).
+      try {
+        mediaEl.pause();
+        const target = start || 0;
+        const showFirstFrame = () => {
+          playhead.style.left = pct(mediaEl.currentTime) + "%";
+          timeEl.textContent = vjsFmtTime(mediaEl.currentTime) + " / " + vjsFmtTime(dur);
+        };
+        mediaEl.addEventListener("canplay", showFirstFrame, { once: true });
+        const landed = new Promise((res) => {
+          mediaEl.addEventListener("seeked", res, { once: true });
+          setTimeout(res, 2000); // never hang the UI on a stuck seek
+        }).then(showFirstFrame);
+        try {
+          if (Math.abs((mediaEl.currentTime || 0) - target) < 0.03) {
+            mediaEl.currentTime = Math.max(0, target - 0.25);
+          } else {
+            mediaEl.currentTime = target;
+          }
+        } catch (_) { /* ignore */ }
+        // Chain the final in-point seek after the nudge lands (or times out).
+        landed.then(() => {
+          try {
+            if (Math.abs((mediaEl.currentTime || 0) - target) > 0.04) {
+              mediaEl.currentTime = target;
+            }
+          } catch (_) { /* ignore */ }
+        });
+      } catch (_) { /* ignore */ }
     }
 
     const controls = el("div", { class: "vjs-trim-controls" });
