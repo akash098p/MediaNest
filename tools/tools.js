@@ -203,12 +203,16 @@ function writeEditorOutputs(values) {
 function isVideoFile(f) {
   if (!f) return false;
   if (f.type && String(f.type).startsWith("video/")) return true;
-  return /\.(mp4|webm|mov|mkv|avi|ogv|m4v)$/i.test(f.name || "");
+  // MIME types are unreliable on Windows (MKV/WMV/FLV/TS often report as
+  // ""), so judge by extension as well. Keep in sync with VIDEO_ACCEPT in
+  // server/tools.js.
+  return /\.(mp4|m4v|mov|webm|mkv|avi|ogv|ogm|wmv|flv|f4v|mpg|mpeg|m2v|m2ts|mts|ts|3gp|3g2|asf|rm|rmvb|vob|dav|mpv)$/i.test(f.name || "");
 }
 function isAudioFile(f) {
   if (!f) return false;
   if (f.type && String(f.type).startsWith("audio/")) return true;
-  return /\.(mp3|wav|ogg|flac|m4a|aac|opus|wma|aiff|aif|mp2|ac3|dts|tak|dsd|caf|weba)$/i.test(f.name || "");
+  // Extension fallback for the same Windows empty-MIME problem (WMA/AMR/OGA…).
+  return /\.(mp3|wav|ogg|oga|flac|m4a|aac|opus|wma|aiff|aif|mp2|ac3|dts|tak|dsd|caf|weba|mid|midi|amr)$/i.test(f.name || "");
 }
 function videoReady(v) {
   // Wait for a decoded frame to be available — `loadedmetadata` alone is
@@ -223,6 +227,38 @@ function videoReady(v) {
     v.addEventListener("error", () => reject(new Error("Could not read the video file.")), { once: true });
   });
 }
+/** Resolve a promise, or reject with `new Error("timeout")` after `ms`. */
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
+      reject(new Error("timeout"));
+    }, ms);
+    Promise.resolve(promise).then(
+      (v) => { if (done) return; done = true; clearTimeout(timer); resolve(v); },
+      (e) => { if (done) return; done = true; clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
+/** Ask the Node/ffprobe backend for a media file's info (fallback when
+ *  the browser can't decode a container/codec for the visual preview). */
+async function probeMediaInfo(file) {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch("/api/probe", { method: "POST", body });
+  if (!res.ok) {
+    let msg = "Could not read the file dimensions.";
+    try {
+      msg = (await res.json()).error || msg;
+    } catch (_) { /* non-JSON error body - keep the default message */ }
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 function getFormNumber(name) {
   const node = document.querySelector(`#toolForm [name="${name}"]`);
   if (!node) return 0;
@@ -273,13 +309,64 @@ async function mountVisualEditor() {
       // positioning kicks in immediately, before the first paint.
       videoEl = el("video", { src: url, muted: "", playsinline: "", preload: "auto", class: "vjs-frame-sink" });
       slot.appendChild(videoEl);
-      await videoReady(videoEl);
-      // Seek a hair into the clip so the first frame the canvas paints
-      // is the actual content, not a black opening frame. For very
-      // short clips (under ~0.4s) this resolves to time 0.
-      videoEl.currentTime = Math.min(0.1, (videoEl.duration || 0) / 4 || 0);
-      await new Promise((res) => videoEl.addEventListener("seeked", res, { once: true }));
-      srcW = videoEl.videoWidth; srcH = videoEl.videoHeight;
+
+      // ---- Try the browser decode first -------------------------------
+      // Browsers only decode a handful of formats (MP4/MOV · H.264,
+      // WebM · VP8/VP9/AV1, ...). MKV, AVI, HEVC/H.265, MPEG-2 and friends
+      // either fire the `error` event or simply never publish dimensions,
+      // which used to drop the editor into the "Could not read the file
+      // dimensions." branch even though the file is perfectly fine. We
+      // give the browser a short window, then fall back to the server
+      // (ffprobe), which reads any format FFmpeg supports.
+      let dims = null;
+      try {
+        await withTimeout(videoReady(videoEl), 6000);
+        // Seek a hair into the clip so the first frame the canvas paints
+        // is the actual content, not a black opening frame. For very
+        // short clips (under ~0.4s) this resolves to time 0.
+        videoEl.currentTime = Math.min(0.1, (videoEl.duration || 0) / 4 || 0);
+        try {
+          await withTimeout(
+            new Promise((res) => videoEl.addEventListener("seeked", res, { once: true })),
+            3000,
+          );
+        } catch (_) { /* some codecs seek without ever firing `seeked` */ }
+        // Some codecs (webm on Chromium) publish dimensions only after the
+        // first frame decodes — `loadedmetadata` alone can read 0. Wait a
+        // beat for a real frame before giving up on the browser.
+        if (!(videoEl.videoWidth > 0 && videoEl.videoHeight > 0)) {
+          try {
+            await withTimeout(
+              new Promise((res) => videoEl.addEventListener("loadeddata", res, { once: true })),
+              3000,
+            );
+          } catch (_) { /* still no frame → fall back to the server probe */ }
+        }
+        if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+          dims = { width: videoEl.videoWidth, height: videoEl.videoHeight };
+        }
+      } catch (_) {
+        // Browser reported an error (or timed out) → probe via the server.
+      }
+
+      if (!dims) {
+        // The browser can't decode this file, so there is nothing to paint
+        // on the canvas. Detach the dead element and ask the Node/ffprobe
+        // backend for the real dimensions instead — the numeric fields
+        // still work, the server can still process this file, and formats
+        // like MKV/AVI/HEVC will no longer hard-fail the editor.
+        if (videoEl && videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
+        videoEl = null;
+        try {
+          const p = await probeMediaInfo(file);
+          if (p.width > 0 && p.height > 0) dims = { width: p.width, height: p.height };
+        } catch (e) {
+          /* leave dims null → the dimension guard below explains why */
+        }
+      }
+
+      srcW = dims ? dims.width : 0;
+      srcH = dims ? dims.height : 0;
       drawable = videoEl;
     } else if (isAudioFile(file)) {
       // Audio has no video frame — the trim editor only needs the
@@ -317,26 +404,13 @@ async function mountVisualEditor() {
 
   if (!srcW || !srcH) {
     if (videoEl && videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
-    slot.replaceChildren(el("p", { class: "small", text: "⚠ Could not read the file dimensions." }));
+    slot.replaceChildren(
+      el("p", {
+        class: "small",
+        text: "⚠ Could not read this file's dimensions — the format isn't supported for preview here. Try an MP4 (H.264) file, or fill in the numbers on the form manually.",
+      }),
+    );
     return;
-  }
-
-  // For videos, some browsers (notably webm on Chromium) report
-  // videoWidth/videoHeight = 0 even after `loadedmetadata` and a
-  // successful seek. If that happens, fall back to the natural canvas
-  // size and wait one more frame for the decoder to publish real
-  // dimensions. We don't abort the editor — we just retry the read.
-  if (drawable && drawable.tagName === "VIDEO" && (drawable.videoWidth === 0 || drawable.videoHeight === 0)) {
-    await new Promise((res) => drawable.addEventListener("loadeddata", res, { once: true }));
-    if (drawable.videoWidth > 0 && drawable.videoHeight > 0) {
-      srcW = drawable.videoWidth;
-      srcH = drawable.videoHeight;
-    } else {
-      // Last-resort default so the editor at least renders something
-      // usable instead of crashing on a 0-size canvas.
-      srcW = srcW || 1920;
-      srcH = srcH || 1080;
-    }
   }
 
   const cfg = editor.editor;
@@ -370,6 +444,19 @@ async function mountVisualEditor() {
   // dedicated helper and returns early before the crop/resize/rotate canvas
   // stage is built.
   if (cfg.kind === "trim") {
+    if (!videoEl) {
+      // The browser couldn't play this file (unsupported container/codec),
+      // so the interactive timeline has nothing to draw. The start/end
+      // number fields below are plain form inputs — the server (ffmpeg)
+      // still trims the file correctly with those numbers.
+      slot.replaceChildren(
+        el("p", {
+          class: "small",
+          text: "⚠ Your browser can't play this format, so the trim timeline isn't available. Enter Start / End (seconds) in the fields below — the server will still cut the file correctly.",
+        }),
+      );
+      return;
+    }
     await mountTrimEditor(slot, videoEl, srcW, srcH, cfg);
     return;
   }
@@ -387,6 +474,20 @@ async function mountVisualEditor() {
     // process via -vn), or a <audio> element.
     const audioEl = videoEl || null;
     await mountAudioEffectEditor(slot, audioEl, cfg);
+    return;
+  }
+
+  // Crop / Resize / Rotate need a live preview to edit against. If the
+  // browser couldn't decode the format, the stage would be a blank box with
+  // nothing to paint — explain instead and leave the numeric form fields
+  // (the server can still process the file).
+  if (!drawable) {
+    slot.replaceChildren(
+      el("p", {
+        class: "small",
+        text: `⚠ Your browser can't preview this format, so the visual editor isn't available. Its dimensions (${srcW}×${srcH}) were read from the file — enter the numbers in the fields below, or convert it to MP4 first to use the visual editor.`,
+      }),
+    );
     return;
   }
 
@@ -2009,7 +2110,13 @@ const KIND_META = {
 function fileKind(f) {
   const t = f.type ? String(f.type).split("/")[0].toLowerCase() : "";
   if (t) return t;
-  return /\.gif$/i.test(f.name) ? "image" : "media";
+  const name = String(f.name || "");
+  // Untyped files (common for MKV/WMV/FLV/TS on Windows): guess by extension
+  // so they land in the right slot instead of "media". Keep in sync with
+  // isVideoFile()/isAudioFile() above.
+  if (/\.(mp4|m4v|mov|webm|mkv|avi|ogv|ogm|wmv|flv|f4v|mpg|mpeg|m2v|m2ts|mts|ts|3gp|3g2|asf|rm|rmvb|vob|dav|mpv)$/i.test(name)) return "video";
+  if (/\.(mp3|wav|ogg|oga|flac|m4a|aac|opus|wma|aiff|aif|mp2|ac3|dts|tak|dsd|caf|weba|mid|midi|amr)$/i.test(name)) return "audio";
+  return /\.gif$/i.test(name) ? "image" : "media";
 }
 
 /** Icon representing the OUTPUT of the current tool. */
@@ -2032,11 +2139,15 @@ function outputIcon() {
 
 function isAcceptableFile(file, accept, slotKind) {
   // Kind match is the primary gate (dropping a video into an audio slot
-  // should be rejected, not crash the server).
+  // should be rejected, not crash the server). Extension guesses count too:
+  // Windows often reports exotic containers (MKV/WMV/FLV/TS) with an empty
+  // MIME type, so isVideoFile()/isAudioFile() also judge by extension.
   const fk = fileKind(file);
   if (fk === slotKind) return true;
   if (slotKind === "media") return true;
   if (slotKind === "image" && /\.gif$/i.test(file.name)) return true;
+  if (slotKind === "video" && isVideoFile(file)) return true;
+  if (slotKind === "audio" && isAudioFile(file)) return true;
 
   const rules = String(accept || "").split(",");
   function ruleMatch(r) {
