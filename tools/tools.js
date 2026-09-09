@@ -243,20 +243,39 @@ function withTimeout(promise, ms) {
   });
 }
 
-/** Ask the Node/ffprobe backend for a media file's info (fallback when
- *  the browser can't decode a container/codec for the visual preview). */
-async function probeMediaInfo(file) {
+/** Ask the Node/ffmpeg backend for a browser-playable MP4 preview of `file`.
+ *  The server transcodes any video container (MKV/AVI/WMV/FLV/TS/HEVC/…)
+ *  down to H.264 640px and streams the bytes back as a Blob. Rejects on
+ *  HTTP errors ("preview-missing" for no-file/empty, otherwise the message
+ *  the server sent or "preview-failed"). */
+async function requestServerPreview(file, onProgress) {
   const body = new FormData();
   body.append("file", file);
-  const res = await fetch("/api/probe", { method: "POST", body });
+  const res = await fetch("/api/preview", { method: "POST", body });
   if (!res.ok) {
-    let msg = "Could not read the file dimensions.";
+    let msg = "preview-failed";
     try {
-      msg = (await res.json()).error || msg;
-    } catch (_) { /* non-JSON error body - keep the default message */ }
-    throw new Error(msg);
+      const j = await res.json();
+      msg = (j && j.error) || msg;
+    } catch (_) { /* binary/empty error body — keep the default */ }
+    throw new Error(msg === "No file uploaded." ? "preview-missing" : msg);
   }
-  return res.json();
+  const total = Number(res.headers.get("content-length")) || 0;
+  if (!res.body || !total || typeof onProgress !== "function") {
+    return res.blob();
+  }
+  // Stream the bytes so we can show % while a big file transcodes+downloads.
+  const reader = res.body.getReader();
+  const chunks = [];
+  let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    got += value.length;
+    try { onProgress(Math.min(1, got / total)); } catch (_) { /* ignore */ }
+  }
+  return new Blob(chunks, { type: "video/mp4" });
 }
 
 function getFormNumber(name) {
@@ -295,6 +314,7 @@ async function mountVisualEditor() {
   // ---- load the source frame (or first video frame / audio duration) ----
   let srcW = 0, srcH = 0, drawable = null;
   let videoEl = null; // visible player (kept in the timeline bar), drives the canvas.
+  let previewNote = ""; // shown under the player when preview ≠ original file
   try {
     const url = URL.createObjectURL(file);
     if (isVideoFile(file)) {
@@ -313,11 +333,10 @@ async function mountVisualEditor() {
       // ---- Try the browser decode first -------------------------------
       // Browsers only decode a handful of formats (MP4/MOV · H.264,
       // WebM · VP8/VP9/AV1, ...). MKV, AVI, HEVC/H.265, MPEG-2 and friends
-      // either fire the `error` event or simply never publish dimensions,
-      // which used to drop the editor into the "Could not read the file
-      // dimensions." branch even though the file is perfectly fine. We
-      // give the browser a short window, then fall back to the server
-      // (ffprobe), which reads any format FFmpeg supports.
+      // either fire the `error` event or simply never publish dimensions.
+      // We give the browser a short window, then fall back to a
+      // server-transcoded MP4 preview (ffmpeg), so the timeline/canvas
+      // still show the real picture for ANY format ffmpeg can read.
       let dims = null;
       try {
         await withTimeout(videoReady(videoEl), 6000);
@@ -340,28 +359,54 @@ async function mountVisualEditor() {
               new Promise((res) => videoEl.addEventListener("loadeddata", res, { once: true })),
               3000,
             );
-          } catch (_) { /* still no frame → fall back to the server probe */ }
+          } catch (_) { /* still no frame → fall back to the server preview */ }
         }
         if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
           dims = { width: videoEl.videoWidth, height: videoEl.videoHeight };
         }
       } catch (_) {
-        // Browser reported an error (or timed out) → probe via the server.
+        // Browser reported an error (or timed out) → server preview below.
       }
 
       if (!dims) {
-        // The browser can't decode this file, so there is nothing to paint
-        // on the canvas. Detach the dead element and ask the Node/ffprobe
-        // backend for the real dimensions instead — the numeric fields
-        // still work, the server can still process this file, and formats
-        // like MKV/AVI/HEVC will no longer hard-fail the editor.
+        // The browser can't decode this file — swap in a server-transcoded
+        // MP4 preview (same pictures, H.264 640px) so the trim timeline and
+        // crop/resize/rotate canvas still show the REAL video. The original
+        // `file` is untouched: Start download still uploads/processes it.
         if (videoEl && videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
         videoEl = null;
+        slot.replaceChildren(
+          el("p", { class: "small", text: "Making a preview of this video (converting for your browser)…" }),
+        );
+        const bar = el("div", { class: "vjs-preview-progress" });
+        const barFill = el("div", { class: "vjs-preview-progress-fill" });
+        bar.appendChild(barFill);
+        slot.appendChild(bar);
+        let blob = null;
         try {
-          const p = await probeMediaInfo(file);
-          if (p.width > 0 && p.height > 0) dims = { width: p.width, height: p.height };
+          blob = await requestServerPreview(file, (p) => {
+            barFill.style.width = Math.round(p * 100) + "%";
+          });
         } catch (e) {
-          /* leave dims null → the dimension guard below explains why */
+          /* fall through → dims stays null, guard below explains why */
+          if (e && e.message && e.message !== "preview-failed" && e.message !== "preview-missing") {
+            slot.replaceChildren(el("p", { class: "small", text: `⚠ ${e.message}` }));
+            return;
+          }
+        }
+        if (blob) {
+          const previewUrl = URL.createObjectURL(blob);
+          videoEl = el("video", { src: previewUrl, muted: "", playsinline: "", preload: "auto", class: "vjs-frame-sink" });
+          slot.replaceChildren();
+          slot.appendChild(el("p", { class: "small", text: "Loading preview…" }));
+          slot.appendChild(videoEl);
+          try {
+            await withTimeout(videoReady(videoEl), 15000);
+            if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+              dims = { width: videoEl.videoWidth, height: videoEl.videoHeight };
+              previewNote = "Preview converted for your browser — Start download still uses your original file.";
+            }
+          } catch (_) { /* preview decode failed → guard below explains */ }
         }
       }
 
@@ -442,22 +487,11 @@ async function mountVisualEditor() {
   // The "trim" editor is video-only and uses a totally different layout — a
   // playable <video> with a draggable in/out timeline — so it's assembled by a
   // dedicated helper and returns early before the crop/resize/rotate canvas
-  // stage is built.
+  // stage is built. `videoEl` here is ALWAYS playable at this point: either
+  // the original file (browser-native) or the server-transcoded MP4 preview,
+  // so the timeline is always available.
   if (cfg.kind === "trim") {
-    if (!videoEl) {
-      // The browser couldn't play this file (unsupported container/codec),
-      // so the interactive timeline has nothing to draw. The start/end
-      // number fields below are plain form inputs — the server (ffmpeg)
-      // still trims the file correctly with those numbers.
-      slot.replaceChildren(
-        el("p", {
-          class: "small",
-          text: "⚠ Your browser can't play this format, so the trim timeline isn't available. Enter Start / End (seconds) in the fields below — the server will still cut the file correctly.",
-        }),
-      );
-      return;
-    }
-    await mountTrimEditor(slot, videoEl, srcW, srcH, cfg);
+    await mountTrimEditor(slot, videoEl, srcW, srcH, cfg, previewNote);
     return;
   }
 
@@ -477,15 +511,14 @@ async function mountVisualEditor() {
     return;
   }
 
-  // Crop / Resize / Rotate need a live preview to edit against. If the
-  // browser couldn't decode the format, the stage would be a blank box with
-  // nothing to paint — explain instead and leave the numeric form fields
-  // (the server can still process the file).
+  // Last-resort guard: at this point `drawable` is always set (original or
+  // server preview), so reaching here means something unexpected broke.
+  // Keep the numeric form fields usable and explain instead of crashing.
   if (!drawable) {
     slot.replaceChildren(
       el("p", {
         class: "small",
-        text: `⚠ Your browser can't preview this format, so the visual editor isn't available. Its dimensions (${srcW}×${srcH}) were read from the file — enter the numbers in the fields below, or convert it to MP4 first to use the visual editor.`,
+        text: "⚠ The visual preview could not be loaded — enter the numbers in the fields below and Start download will still process the file.",
       }),
     );
     return;
@@ -500,6 +533,11 @@ async function mountVisualEditor() {
   // `.vjs-frame-sink` class travels with the element, so the
   // off-screen positioning survives the move.
   slot.replaceChildren(...(videoEl ? [videoEl] : []));
+  // Server-transcoded preview (MKV/AVI/WMV/…): same pictures, H.264 MP4.
+  // Start download still uploads/processes the ORIGINAL file bytes.
+  if (previewNote) {
+    slot.appendChild(el("p", { class: "small vjs-preview-note", text: "ℹ " + previewNote }));
+  }
   const toolbar = el("div", { class: "vjs-editor-toolbar" });
   const presetSel = el("select", { class: "vjs-preset" });
   for (const p of cfg.presets || []) {
@@ -1091,11 +1129,12 @@ function vjsFmtTime(s) {
   const sec = s - m * 60;
   return `${m}:${sec.toFixed(1).padStart(4, "0")}`;
 }
-function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg) {
+function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
   // Trim is video or audio: a playable <video>/<audio> + a draggable
   // in/out timeline. The caller (mountVisualEditor) passes whichever
-  // element the file produced — <video> for video files, <audio> for
-  // audio-only files.
+  // element the file produced — <video> for video files (original bytes
+  // or the server-transcoded MP4 preview — both play the same pictures),
+  // <audio> for audio-only files.
   if (!mediaEl) {
     slot.replaceChildren(
       el("p", { class: "small", text: "⚠ Trim plays a media file — add one above to set in/out points." }),
@@ -1136,6 +1175,12 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg) {
 
     // --- build the player ---
     slot.replaceChildren();
+
+    // Server-transcoded preview (MKV/AVI/WMV/…): same pictures, H.264 MP4.
+    // Start download still uploads/processes the ORIGINAL file bytes.
+    if (previewNote && !isAudio) {
+      slot.appendChild(el("p", { class: "small vjs-preview-note", text: "ℹ " + previewNote }));
+    }
 
     const player = el("div", { class: "vjs-trim-player" });
     if (isAudio) {
