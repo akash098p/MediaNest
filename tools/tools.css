@@ -970,6 +970,32 @@ footer {
   border-radius: 12px;
 }
 .vjs-editor-slot .small { margin: 0 0 10px; opacity: 0.85; }
+.vjs-editor-slot .vjs-preview-note {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.vjs-preview-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  margin: 8px 0 4px;
+}
+.vjs-preview-progress-fill {
+  height: 100%;
+  width: 8%;
+  border-radius: 999px;
+  background: var(--accent, #38bdf8);
+  transition: width 0.25s ease;
+  animation: vjs-preview-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes vjs-preview-pulse {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
 /* The <video> element is appended to the slot during loading (so the
    browser will decode frames onto the canvas) and then moved into the
    timeline bar. While it sits anywhere inside the editor area, it must
