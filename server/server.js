@@ -51,6 +51,32 @@ app.get("/api/health", async (req, res) => {
   res.json({ ok, ffmpeg: process.env.FFMPEG_PATH || "ffmpeg" });
 });
 
+// Probe an uploaded media file and return its real dimensions / duration.
+// The tool pages use this as a fallback when the browser itself can't decode
+// a container/codec (MKV, AVI, HEVC/H.265, MPEG-2, …) — ffprobe reads those
+// fine, so the crop/resize/rotate/trim editors can still know the size.
+app.post("/api/probe", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded." });
+    }
+    const m = await probeMedia(req.file.path);
+    if (!m.width && !m.height && !m.duration) {
+      return res
+        .status(422)
+        .json({ error: "Could not read the file dimensions." });
+    }
+    res.json(m);
+  } catch (e) {
+    res
+      .status(422)
+      .json({ error: e.message || "Could not read the file dimensions." });
+  } finally {
+    // Never leave the staged probe file behind.
+    cleanupAll(req.file ? [req.file] : [], null);
+  }
+});
+
 app.post("/api/tools/:id", upload.any(), async (req, res) => {
   const tool = getById(req.params.id);
   if (!tool) {
