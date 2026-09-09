@@ -735,13 +735,19 @@ tools.push({
 // VIDEO
 // ============================================================
 
+// Shared accept pattern for every video input. "video/*" alone hides
+// exotic-but-valid containers (MKV/WMV/FLV/TS…) in the native picker on some
+// platforms, so list the extensions too. Keep in sync with
+// isVideoFile()/fileKind() in tools/tools.js.
+const VIDEO_ACCEPT = "video/*,.mp4,.m4v,.mov,.webm,.mkv,.avi,.ogv,.ogm,.wmv,.flv,.f4v,.mpg,.mpeg,.m2v,.m2ts,.mts,.ts,.3gp,.3g2,.asf,.rm,.rmvb,.vob,.dav,.mpv";
+
 tools.push({
   id: "extract-audio",
   name: "Extract Audio from Video",
   group: "Video",
   icon: "icons/extract audio from video.png",
   description: "Pull out the audio track of a video and save it as an audio file.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   fields: [{ name: "format", label: "Audio format", type: "select", options: ["mp3", "wav", "aac", "m4a", "ogg", "flac"] }],
   defaultExt: "mp3",
   build(ctx) {
@@ -765,7 +771,7 @@ tools.push({
   group: "Video",
   icon: "icons/remove sound from video.png",
   description: "Delete the audio track and create a silent video.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   defaultExt: "mp4",
   build(ctx) {
     const video = ctx.file("video");
@@ -779,7 +785,7 @@ tools.push({
   group: "Video",
   icon: "icons/video compressor.png",
   description: "Reduce video file size — targets a fraction of the source bitrate so output is always smaller.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   needDuration: true,
   fields: [
     {
@@ -1015,7 +1021,7 @@ tools.push({
   group: "GIF",
   icon: "icons/video to gif.png",
   description: "Convert a video clip into an optimized animated GIF.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   fields: [
     { name: "fps", label: "Frame rate", type: "number", default: 12, min: 1, max: 30, step: 1 },
     { name: "scale", label: "Scale width (0 = keep)", type: "number", default: 480, min: 0, step: 1 },
@@ -1206,7 +1212,7 @@ tools.push({
   group: "Video",
   icon: "icons/convert video format.png",
   description: "Transcode a video to MP4, WebM or MOV without bloating the file.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   fields: [
     { name: "format", label: "Format", type: "select", options: ["mp4", "webm", "mov"] },
     {
@@ -1261,7 +1267,7 @@ tools.push({
   group: "Video",
   icon: "icons/crop video.png",
   description: "Crop a region out of a video — drag the box, or pick a standard aspect ratio.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   fields: [
     { name: "_editor", label: "Visual editor", type: "editor",
       editor: { kind: "crop", emits: ["x", "y", "w", "h"],
@@ -1297,7 +1303,7 @@ tools.push({
   group: "Video",
   icon: "icons/resize video.png",
   description: "Scale a video to new dimensions — pick a preset, keep aspect, or go custom.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   fields: [
     { name: "_editor", label: "Visual editor", type: "editor",
       editor: { kind: "resize", emits: ["width", "height"], lockAspect: true,
@@ -1331,7 +1337,7 @@ tools.push({
   group: "Video",
   icon: "icons/rotate video.png",
   description: "Rotate a video to any angle, or pick a quick 90/180/270 preset.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   fields: [
     { name: "_editor", label: "Visual editor", type: "editor",
       editor: { kind: "rotate", emits: ["degrees"],
@@ -1375,7 +1381,7 @@ tools.push({
   group: "Video",
   icon: "icons/flip video.png",
   description: "Mirror a video horizontally, vertically, or both — perfect for selfies and re-orienting footage.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   fields: [
     {
       name: "flip",
@@ -1409,7 +1415,7 @@ tools.push({
   group: "Video",
   icon: "icons/reverse video.png",
   description: "Play a video backwards — both the picture and its soundtrack are reversed end-to-end.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   defaultExt: "mp4",
   build(ctx) {
     const video = ctx.file("video");
@@ -1440,7 +1446,7 @@ tools.push({
   // TODO: swap in a dedicated icon (e.g. "icons/speed video.png") once added.
   icon: "icons/change audio speed.png",
   description: "Speed a video up or slow it down (0.25× – 4×) — picture and soundtrack stay in sync.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   fields: [
     { name: "speed", label: "Speed factor", type: "number", default: 1.5, min: 0.25, max: 4, step: 0.05,
       note: "2 = twice as fast (half the length) · 0.5 = half speed (twice the length)." },
@@ -1492,7 +1498,7 @@ tools.push({
   group: "Video",
   icon: "icons/trim video.png",
   description: "Cut a start to end segment from a video.",
-  inputs: [{ name: "video", label: "Video file", accept: "video/*" }],
+  inputs: [{ name: "video", label: "Video file", accept: VIDEO_ACCEPT }],
   fields: [
     // 'editor' is a client-side hint: the frontend mounts a playable <video>
     // with a draggable in/out timeline (the "trim" editor) and writes the
@@ -1530,7 +1536,7 @@ tools.push({
   group: "Video",
   icon: "icons/merge video.png",
   description: "Concatenate multiple videos into a single file.",
-  inputs: [{ name: "video", label: "Video files (in order)", accept: "video/*", multiple: true }],
+  inputs: [{ name: "video", label: "Video files (in order)", accept: VIDEO_ACCEPT, multiple: true }],
   defaultExt: "mp4",
   build(ctx) {
     const files = ctx.files("video");
@@ -1557,7 +1563,7 @@ tools.push({
   icon: "icons/replace audio in video.png",
   description: "Swap the audio track of a video with a new audio file.",
   inputs: [
-    { name: "video", label: "Video file", accept: "video/*" },
+    { name: "video", label: "Video file", accept: VIDEO_ACCEPT },
     { name: "audio", label: "Replacement audio", accept: "audio/*" },
   ],
   defaultExt: "mp4",
