@@ -997,17 +997,16 @@ footer {
   to { opacity: 1; }
 }
 /* The <video> element is appended to the slot during loading (so the
-   browser will decode frames onto the canvas) and then moved into the
-   timeline bar. While it sits anywhere inside the editor area, it must
-   not be visible to the user — otherwise it would show a black
-   rectangle or its own controls next to the canvas, which paints the
-   same frame. We do NOT use `display: none` here: most browsers suspend
+   browser will decode frames onto the canvas). While loading it must
+   not be visible — otherwise it would show a black rectangle next to
+   the canvas. We do NOT use `display: none`: most browsers suspend
    frame decoding for `display: none` videos, which leaves the canvas
-   blank. Instead, we park the element off-screen at 1×1 px with
-   `opacity: 0` so the browser still treats it as laid-out (and decodes
-   frames into it). The .vjs-frame-sink class is applied at creation so
-   the rule matches even before the element is moved into the bar. */
-.vjs-editor-slot video,
+   blank. Instead, only the .vjs-frame-sink parked state is off-screen
+   (1x1, opacity 0) so the browser still decodes frames into it. Once
+   the element is moved into the visible player (.vjs-trim-video or the
+   canvas stage) the class is removed, so this rule no longer applies.
+   NOTE: never hide `.vjs-editor-slot video` wholesale — the trim player
+   video lives inside the slot AND must stay visible. */
 .vjs-frame-sink {
   position: absolute !important;
   left: -99999px !important;
@@ -1377,10 +1376,30 @@ footer {
 }
 .vjs-trim-video video {
   display: block;
+  position: static !important;
   width: 100%;
   height: 100%;
   max-width: 100%;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
   object-fit: contain;
+}
+/* The timeline-bar <video> for crop/resize/rotate must also beat the parked
+   state once the class is removed — belt and suspenders against the old
+   `.vjs-editor-slot video` rule cached in users' browsers. */
+.vjs-video-bar video {
+  position: static !important;
+  width: 160px !important;
+  height: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  /* Sound in the crop/resize/rotate bar too: the loader parks the element
+     muted (muted="") to decode while off-screen; unmute it via JS (both the
+     .muted property and the muted="" attribute) so the bar preview plays
+     audio, same as the trim player. Native <video> doesn't expose these as
+     CSS properties, so we do NOT try to set them here. */
 }
 /* Audio trim: no video frame — just the native <audio> player */
 .vjs-trim-audio {
