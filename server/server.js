@@ -77,6 +77,76 @@ app.post("/api/probe", upload.single("file"), async (req, res) => {
   }
 });
 
+// Transcode an uploaded video to a browser-playable MP4 preview (H.264 /
+// yuv420p / faststart + AAC). Lets the trim/crop/resize/rotate editors show
+// a real playable timeline even for containers the browser can't decode
+// natively (MKV, AVI, WMV, FLV, TS, HEVC, …). The uploaded file is only a
+// preview source — Start download still processes the ORIGINAL bytes.
+// Preview is capped at 640px wide + crf 28 + veryfast so it stays quick.
+//
+// Cleanup: the staged upload and the preview file are BOTH deleted once the
+// response finishes (res.download callback / req close). A 15-min sweeper
+// also removes any orphan `preview-*` files left by aborted requests.
+const PREVIEW_TTL_MS = 15 * 60 * 1000;
+const PREVIEW_SWEEP_MS = 5 * 60 * 1000;
+setInterval(() => {
+  try {
+    const now = Date.now();
+    for (const name of fs.readdirSync(TMP)) {
+      if (!name.startsWith("preview-")) continue;
+      const p = path.join(TMP, name);
+      try {
+        if (now - fs.statSync(p).mtimeMs > PREVIEW_TTL_MS) safeUnlink(p);
+      } catch (_) { /* ignore */ }
+    }
+  } catch (_) { /* TMP missing — ignore */ }
+}, PREVIEW_SWEEP_MS).unref();
+app.post("/api/preview", upload.single("file"), async (req, res) => {
+  const staged = req.file ? req.file.path : null;
+  let outPath = null;
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded." });
+    }
+    if (!/\.(mp4|m4v|mov|webm|mkv|avi|ogv|ogm|wmv|flv|f4v|mpg|mpeg|m2v|m2ts|mts|ts|3gp|3g2|asf|rm|rmvb|vob|dav|mpv)$/i.test(
+      req.file.originalname || "",
+    )) {
+      return res.status(415).json({ error: "That file is not a video." });
+    }
+    outPath = path.join(TMP, `preview-${crypto.randomUUID()}.mp4`);
+    await runFfmpeg(
+      ["-i", staged, "-vf", "scale=640:-2", "-c:v", "libx264", "-preset", "veryfast",
+       "-crf", "28", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k",
+       "-movflags", "+faststart", outPath],
+      { timeoutMs: 5 * 60 * 1000 },
+    );
+    res.download(outPath, "preview.mp4", (err) => {
+      safeUnlink(staged);
+      safeUnlink(outPath);
+      if (err && !res.headersSent) {
+        res.status(500).send("Preview failed.");
+      }
+    });
+    req.on("close", () => {
+      // Client aborted mid-download — still clean up both files.
+      if (!res.writableFinished) {
+        safeUnlink(staged);
+        safeUnlink(outPath);
+      }
+    });
+  } catch (e) {
+    safeUnlink(staged);
+    safeUnlink(outPath);
+    if (!res.headersSent) {
+      res.status(422).json({
+        error: e.message && /timed out/i.test(e.message)
+          ? "Preview timed out — the file may be very large. Try a shorter clip."
+          : "Could not make a preview of this file.",
+      });
+    }
+  }
+});
+
 app.post("/api/tools/:id", upload.any(), async (req, res) => {
   const tool = getById(req.params.id);
   if (!tool) {
