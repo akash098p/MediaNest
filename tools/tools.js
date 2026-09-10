@@ -14,7 +14,13 @@ function el(tag, attrs = {}, children = []) {
     else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
     else if (v !== undefined && v !== null) node.setAttribute(k, v);
   }
-  for (const c of [].concat(children)) if (c) node.appendChild(c);
+  for (const c of [].concat(children)) {
+    if (c === null || c === undefined) continue;
+    // Allow plain strings as shorthand text content — appendChild() would
+    // throw "parameter 1 is not of type 'Node'" and abort the whole
+    // visual editor mount (black canvas, dead crop box).
+    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
   return node;
 }
 
@@ -639,13 +645,13 @@ async function mountVisualEditor() {
   // playhead update, which keeps the crop box aligned with the current frame.
   if (videoEl) {
     const bar = el("div", { class: "vjs-video-bar" });
-    const playBtn = el("button", { type: "button", class: "vjs-play-btn", title: "Play / Pause" }, ["▶"]);
+    const playBtn = el("button", { type: "button", class: "vjs-play-btn", title: "Play / Pause", text: "▶" });
     const scrubber = el("input", {
       type: "range", class: "vjs-scrubber", min: "0", max: "1", step: "0.001", value: "0",
     });
     const time = el("span", { class: "vjs-time", text: "0:00.0 / 0:00.0" });
-    const backBtn = el("button", { type: "button", class: "vjs-frame-btn", title: "Previous frame" }, ["⟨ frame"]);
-    const fwdBtn = el("button", { type: "button", class: "vjs-frame-btn", title: "Next frame" }, ["frame ⟩"]);
+    const backBtn = el("button", { type: "button", class: "vjs-frame-btn", title: "Previous frame", text: "⟨ frame" });
+    const fwdBtn = el("button", { type: "button", class: "vjs-frame-btn", title: "Next frame", text: "frame ⟩" });
     bar.append(backBtn, playBtn, scrubber, time, fwdBtn);
     // Move the live <video> element from the slot (where the loader placed it)
     // into the timeline bar so playback works alongside the canvas. The
@@ -760,7 +766,20 @@ async function mountVisualEditor() {
     frame.style.height = renderH + "px";
     // Give the stage a stable min-height so the bar + toolbar + canvas
     // always have room and the page doesn't jump on every fit() call.
-    stage.style.minHeight = renderH + 24 + "px";
+    // The rotate editor is special: its drag knob + stalk stick ~44px
+    // ABOVE the box. When a short (landscape) video is centered in the
+    // stage, that knob lands outside the stage's overflow:hidden clip and
+    // becomes invisible + unhittable (the toolbar underneath swallows the
+    // click), so the rotate handle can never be dragged. Reserve top
+    // headroom for rotate only.
+    const rotateHeadroom = cfg.kind === "rotate" ? 48 : 0;
+    if (rotateHeadroom) {
+      stage.style.paddingTop = rotateHeadroom + "px";
+      stage.style.minHeight = renderH + rotateHeadroom + 24 + "px";
+    } else {
+      stage.style.paddingTop = "";
+      stage.style.minHeight = renderH + 24 + "px";
+    }
     redraw();
     // For video drawables, also schedule a redraw on the next decoded
     // frame. drawImage() during the very first call may run before the
