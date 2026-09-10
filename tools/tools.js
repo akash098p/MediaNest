@@ -879,10 +879,15 @@ async function mountVisualEditor() {
   };
   const write = (o) => {
     if (cfg.kind !== "rotate") {
+      // Clamp the SIZE first so the position clamp below sees the final
+      // dimensions. Order matters: o.x is bounded by (srcW - o.w), so if
+      // the width grows on the same gesture (E-handle dragged past the
+      // right frame edge), clamping x first would sink it to the largest
+      // value valid for the OLD width — collapsing back toward the left.
       if ("w" in o) o.w = Math.max(8, Math.min(srcW, Math.round(o.w)));
       if ("h" in o) o.h = Math.max(8, Math.min(srcH, Math.round(o.h)));
-      if ("x" in o) o.x = Math.max(0, Math.min(srcW - (o.w || 1), Math.round(o.x)));
-      if ("y" in o) o.y = Math.max(0, Math.min(srcH - (o.h || 1), Math.round(o.y)));
+      if ("x" in o) o.x = Math.max(0, Math.min(Math.max(0, srcW - (o.w || 1)), Math.round(o.x)));
+      if ("y" in o) o.y = Math.max(0, Math.min(Math.max(0, srcH - (o.h || 1)), Math.round(o.y)));
       if ("width"  in o) o.width  = Math.max(8, Math.round(o.width));
       if ("height" in o && o.height > 0) o.height = Math.max(8, Math.round(o.height));
     }
@@ -1106,8 +1111,11 @@ async function mountVisualEditor() {
         if (aspectLock) { /* nh lands on canvas-top via aspect on nw (see below) */ }
         else            ny = startY;                  // canvas-top fixed → nh IS the delta
       }
+      // Aspect base for this gesture (hoisted so the min-size clamp below
+      // can reuse it — it used to live only inside the block above, where
+      // later references to it would throw a ReferenceError).
+      const ar = startH > 0 ? startW / startH : 1;
       if (aspectLock) {
-        const ar = startW / startH;
         if (Math.abs(sdx) > Math.abs(sdy)) {
           nh = nw / ar;  // width leads → recalculate height
         } else {
@@ -1128,15 +1136,46 @@ async function mountVisualEditor() {
       }
       // Enforce minimum size; when the dimension is clamped, the canvas
       // anchor of the opposite edge must shift so the box doesn't drift.
+      // Which edge is anchored depends on the handle: E*/S* handles keep
+      // the left/top edge fixed (only the size shrinks), while W*/N*
+      // handles keep the right/bottom edge fixed (position shifts).
+      const westEdge = h.includes("w");
+      const northEdge = h.includes("n");
       if (nw < 16) {
         const prevNw = nw; nw = 16;
-        nx -= (nw - prevNw);  // keep canvas-right fixed → move left edge right
+        if (westEdge) nx -= (nw - prevNw);  // keep canvas-right fixed → move left edge right
+        // (E*/SE*/NE* already anchor canvas-left: size-only clamp.)
         if (aspectLock) nh = nw / ar;
       }
       if (nh < 16) {
         const prevNh = nh; nh = 16;
-        ny -= (nh - prevNh);  // keep canvas-bottom fixed → move top edge down
+        if (northEdge) ny -= (nh - prevNh);  // keep canvas-bottom fixed → move top edge down
+        // (S*/SE*/SW* already anchor canvas-top: size-only clamp.)
         if (aspectLock) nw = nh * ar;
+      }
+      // Keep the box inside the source, honouring the anchored edge:
+      // the anchored (opposite) edge wins, the dragged edge absorbs
+      // the clamp.  E.g. dragging E past the right frame edge shrinks
+      // the width (right edge stops at srcW) instead of pushing x
+      // negative — which used to snap the box back to the left side.
+      if ("w" in o) {
+        if (nx < 0) {
+          if (westEdge) { nw += nx; nx = 0; }   // W*/NW*/SW*: moving edge absorbs
+          else nx = 0;                          // E*/SE*/NE*: left is anchored, clamp via width below
+        }
+        if (ny < 0) {
+          if (northEdge) { nh += ny; ny = 0; }  // N*/NW*/NE*: moving edge absorbs
+          else ny = 0;                          // S*/SE*/SW*: top is anchored, clamp via height below
+        }
+        if (nx + nw > srcW) {
+          if (westEdge) nx = srcW - nw;         // W*: right is anchored, slide box right (min-size guards in write())
+          else nw = srcW - nx;                  // E*: left is anchored, shrink width — rightmost reachable x = srcW - nw
+        }
+        if (ny + nh > srcH) {
+          if (northEdge) ny = srcH - nh;        // N*: bottom is anchored, slide box down
+          else nh = srcH - ny;                  // S*: top is anchored, shrink height
+        }
+        nw = Math.max(16, nw); nh = Math.max(16, nh);
       }
       if ("w" in o) { o.w = nw; o.h = nh; o.x = nx; o.y = ny; }
       else {
