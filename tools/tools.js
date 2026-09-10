@@ -1427,17 +1427,22 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
     const playBtn = el("button", { type: "button", class: "vjs-play-btn", title: "Play / Pause", text: "▶" });
     const loopBtn = el("button", { type: "button", class: "vjs-loop-btn", title: "Loop the trimming region", text: "⏏" });
     const timeEl = el("span", { class: "vjs-time", text: vjsFmtTime(0) + " / " + vjsFmtTime(dur) });
-    controls.append(playBtn, loopBtn, timeEl);
+    const snapBtn = el("button", { type: "button", class: "vjs-loop-btn", title: "Snap the In/Out handles to nearby beats", text: "🧲 Snap off" });
+    controls.append(playBtn, loopBtn, snapBtn, timeEl);
     player.appendChild(controls);
 
     const timeline = el("div", { class: "vjs-trim-timeline" });
+    const waveWrap = el("div", { class: "vjs-wave-wrap", title: "Waveform — click to seek" });
+    const waveCanvas = el("canvas", { class: "vjs-wave-canvas" });
+    const waveHint = el("div", { class: "vjs-wave-hint", text: "〰 Loading waveform…" });
+    waveWrap.append(waveCanvas, waveHint);
     const track = el("div", { class: "vjs-trim-track", "aria-label": "Drag the in/out handles to trim" });
     const fill = el("div", { class: "vjs-trim-fill" });
     const playhead = el("div", { class: "vjs-trim-playhead" });
     const inHandle = el("div", { class: "vjs-trim-handle vjs-trim-in", "data-handle": "start", title: "Start — drag to move" });
     const outHandle = el("div", { class: "vjs-trim-handle vjs-trim-out", "data-handle": "end", title: "End — drag to move" });
     track.append(fill, playhead, inHandle, outHandle);
-    timeline.appendChild(track);
+    timeline.append(waveWrap, track);
     player.appendChild(timeline);
 
     // In / Out / Length readouts (kept in sync live as you drag).
@@ -1457,19 +1462,187 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
     // --- state + helpers ---
     let playing = false;
     let loop = false;
+    let snapOn = false; // snap In/Out handles to nearby detected beats
     let drag = null;
     const pct = (t) => (dur ? (t / dur) * 100 : 0);
+
+    // --- beat-waveform pipeline -----------------------------------------
+    // The canvas above the handles is only a shell until this decodes the
+    // media bytes (original file, or the server-transcoded MP4 preview for
+    // MKV/AVI/WMV/…) via Web Audio, then stores per-column peaks + beat
+    // (onset) times in seconds. Purely visual: trim still submits plain
+    // start/end numbers, and every failure below degrades to the hint text
+    // instead of breaking the trimmer.
+    function detectBeats(peaks, totalDur) {
+      const n = peaks ? peaks.length : 0;
+      if (!n || !(totalDur > 0)) return [];
+      const flux = new Array(n).fill(0);
+      for (let i = 1; i < n; i++) {
+        flux[i] = Math.max(0, (peaks[i] || 0) - (peaks[i - 1] || 0));
+      }
+      let mean = 0;
+      for (const v of flux) mean += v;
+      mean /= n;
+      let sd = 0;
+      for (const v of flux) sd += (v - mean) * (v - mean);
+      sd = Math.sqrt(sd / n) || 1;
+      const thr = mean + 0.6 * sd;
+      const minGap = Math.max(1, Math.floor((n * 0.22) / totalDur)); // ~0.22s apart
+      const beats = [];
+      let last = -1e9;
+      for (let i = 1; i < n - 1; i++) {
+        if (flux[i] > thr && flux[i] >= flux[i - 1] && flux[i] > flux[i + 1] && i - last >= minGap) {
+          beats.push((i / n) * totalDur);
+          last = i;
+        }
+      }
+      return beats.slice(0, 400);
+    }
+
+    function snapTime(t) {
+      if (!snapOn || !trimWave.beats || !trimWave.beats.length) return t;
+      let best = t, bd = 0.25; // 250ms snap window — feels magnetic, not jumpy
+      for (const b of trimWave.beats) {
+        const d = Math.abs(b - t);
+        if (d < bd) { bd = d; best = b; }
+      }
+      return best;
+    }
+
+    async function loadWaveform() {
+      try {
+        waveHint.style.display = "flex";
+        waveHint.textContent = "〰 Loading waveform…";
+        const src = mediaEl.currentSrc || mediaEl.src;
+        if (!src) throw new Error("no-src");
+        const res = await fetch(src);
+        if (!res.ok) throw new Error("fetch-failed");
+        const buf = await res.arrayBuffer();
+        if (!buf || !buf.byteLength) throw new Error("empty-bytes");
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) throw new Error("no-webaudio");
+        const ac = new AC(); // suspended is fine — decodeAudioData still works
+        let decoded = null;
+        try {
+          decoded = await ac.decodeAudioData(buf);
+        } finally {
+          try { ac.close(); } catch (_) { /* ignore */ }
+        }
+        if (!decoded || !decoded.length) throw new Error("decode-empty");
+        const N = 1200; // peak columns across the full duration
+        const ch0 = decoded.getChannelData(0);
+        const ch1 = decoded.numberOfChannels > 1 ? decoded.getChannelData(1) : null;
+        const block = Math.max(1, Math.floor(ch0.length / N));
+        const peaks = new Array(N);
+        for (let i = 0; i < N; i++) {
+          const s0 = i * block;
+          const s1 = Math.min(ch0.length, s0 + block);
+          const step = Math.max(1, Math.floor((s1 - s0) / 40)); // sample, don't scan millions
+          let peak = 0;
+          for (let j = s0; j < s1; j += step) {
+            const v = ch1 ? (ch0[j] + ch1[j]) * 0.5 : ch0[j];
+            const a = v < 0 ? -v : v;
+            if (a > peak) peak = a;
+          }
+          peaks[i] = Math.min(1, peak);
+        }
+        // Gentle perceptual lift so quiet sections stay visible, drops stay tall.
+        for (let i = 0; i < N; i++) peaks[i] = Math.pow(peaks[i], 0.7);
+        trimWave.peaks = peaks;
+        trimWave.dur = dur;
+        trimWave.beats = detectBeats(peaks, dur);
+        trimWave.ready = true;
+        waveHint.style.display = "none";
+        scheduleWaveDraw();
+      } catch (_) {
+        waveHint.style.display = "flex";
+        waveHint.textContent = "〰 Waveform unavailable — drag the handles or type times below.";
+        scheduleWaveDraw();
+      }
+    }
+
+    // --- waveform (beats) ------------------------------------------------
+    // Decodes the audio bytes with Web Audio and draws min/max peaks per
+    // horizontal pixel — the "beat waves" the user trims against. Beat
+    // ticks (onset detection) mark drops. Purely visual: trim still
+    // submits plain start/end numbers. The peaks/beats themselves are
+    // filled in by loadWaveform() further down (async decode); until then
+    // the canvas is just the dark shell + hint text.
+    const trimWave = { peaks: null, beats: null, dur: 0, ready: false, raf: 0 };
+    const WAVE_COL = "rgba(140,170,255,0.85)";
+    const WAVE_DIM = "rgba(140,170,255,0.30)";
+    const BEAT_COL = "rgba(255,196,80,0.9)";
+    // Resize repaint: canvas backing store is rebuilt in a rAF so rapid
+    // resizes don't thrash layout, and `_trimWaveResize` lets us detach
+    // the observer when the editor re-mounts for another file.
+    if (trimWave._resizeObs) { try { trimWave._resizeObs.disconnect(); } catch (_) {} }
+    trimWave._resizeObs = null;
+    trimWave._resizeT = 0;
+
+    function sizeWaveCanvas() {
+      const w = Math.max(50, Math.floor(waveWrap.clientWidth || 600));
+      const h = 96;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      waveCanvas.width = Math.round(w * dpr);
+      waveCanvas.height = Math.round(h * dpr);
+      waveCanvas.style.width = w + "px";
+      waveCanvas.style.height = h + "px";
+    }
+
+    function drawWave() {
+      const ctx2d = waveCanvas.getContext("2d");
+      if (!ctx2d || !waveCanvas.width) return;
+      const W = waveCanvas.width, H = waveCanvas.height;
+      const mid = H / 2;
+      ctx2d.clearRect(0, 0, W, H);
+      ctx2d.fillStyle = "rgba(10,14,26,0.55)";
+      ctx2d.fillRect(0, 0, W, H);
+      ctx2d.fillStyle = "rgba(255,255,255,0.10)";
+      ctx2d.fillRect(0, Math.floor(mid), W, 1);
+      const ps = pct(start) / 100, pe = pct(end) / 100;
+      if (trimWave.peaks && trimWave.peaks.length && trimWave.dur > 0) {
+        const n = trimWave.peaks.length;
+        for (let x = 0; x < W; x++) {
+          const idx = Math.min(n - 1, Math.floor((x / W) * n));
+          const v = trimWave.peaks[idx] || 0;
+          const bh = Math.max(1, v * (mid - 3));
+          const t = x / W;
+          ctx2d.fillStyle = (t >= ps && t <= pe) ? WAVE_COL : WAVE_DIM;
+          ctx2d.fillRect(x, mid - bh, 1, bh * 2);
+        }
+        if (trimWave.beats && trimWave.beats.length) {
+          ctx2d.fillStyle = BEAT_COL;
+          for (const bt of trimWave.beats) {
+            ctx2d.fillRect(Math.round((bt / trimWave.dur) * W), 2, 2, 8);
+          }
+        }
+      }
+      ctx2d.fillStyle = "rgba(0,0,0,0.45)";
+      ctx2d.fillRect(0, 0, Math.round(ps * W), H);
+      ctx2d.fillRect(Math.round(pe * W), 0, W - Math.round(pe * W), H);
+      const px = Math.round((pct(mediaEl.currentTime || 0) / 100) * W);
+      ctx2d.fillStyle = "#4f7cff";
+      ctx2d.fillRect(px - 1, 0, 2, H);
+    }
+
+    function scheduleWaveDraw() {
+      cancelAnimationFrame(trimWave.raf);
+      trimWave.raf = requestAnimationFrame(drawWave);
+    }
 
     function syncVisual() {
       const ps = pct(start) || 0;
       const pe = pct(end) || 0;
       inHandle.style.left = ps + "%";
       outHandle.style.left = pe + "%";
+      inHandle.title = `Start ${vjsFmtTime(start)} — drag to move`;
+      outHandle.title = `End ${vjsFmtTime(end)} — drag to move`;
       fill.style.left = ps + "%";
       fill.style.width = Math.max(0, pe - ps) + "%";
       inVal.textContent = vjsFmtTime(start);
       outVal.textContent = vjsFmtTime(end);
       lenVal.textContent = vjsFmtTime(end - start);
+      scheduleWaveDraw(); // keep wave shading + playhead in sync
     }
     function writeForm() {
       writeEditorOutputs({ start: +start.toFixed(3), end: +end.toFixed(3) });
@@ -1489,8 +1662,8 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
       if (mediaEl.paused) mediaEl.play().catch(() => {});
       else mediaEl.pause();
     });
-    function onPlay() { playBtn.textContent = "⏸"; playing = true; }
-    function onPause() { playBtn.textContent = "▶"; playing = false; }
+    function onPlay() { playBtn.textContent = "⏸"; playing = true; waveTick(); }
+    function onPause() { playBtn.textContent = "▶"; playing = false; cancelAnimationFrame(trimWave.playRaf); scheduleWaveDraw(); }
     mediaEl.addEventListener("play", onPlay);
     mediaEl.addEventListener("playing", onPlay);
     mediaEl.addEventListener("pause", onPause);
@@ -1500,6 +1673,15 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
       loop = !loop;
       loopBtn.classList.toggle("is-on", loop);
       loopBtn.textContent = loop ? "↻ Loop on" : "⏏";
+    });
+
+    snapBtn.addEventListener("click", () => {
+      snapOn = !snapOn;
+      snapBtn.classList.toggle("is-on", snapOn);
+      snapBtn.textContent = snapOn ? "🧲 Snap on" : "🧲 Snap off";
+      // Re-seat both handles so enabling snap visibly pulls near-beat
+      // positions onto the beat; disabling leaves them where they are.
+      if (snapOn) setTimes(snapTime(start), snapTime(end));
     });
 
     mediaEl.addEventListener("timeupdate", () => {
@@ -1517,12 +1699,20 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
     });
 
     // --- timeline: click to seek, drag handles to set in/out ---
+    // Clicking the waveform seeks too (same timeline position, bigger target).
+    function seekFromClientX(clientX) {
+      const rect = track.getBoundingClientRect();
+      const t = clamp(((clientX - rect.left) / rect.width) * dur, 0, dur);
+      mediaEl.currentTime = t;
+    }
     track.addEventListener("pointerdown", (e) => {
       if (e.target.closest(".vjs-trim-handle")) return; // the handle owns this gesture
       e.preventDefault();
-      const rect = track.getBoundingClientRect();
-      const t = clamp(((e.clientX - rect.left) / rect.width) * dur, 0, dur);
-      mediaEl.currentTime = t;
+      seekFromClientX(e.clientX);
+    });
+    waveWrap.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      seekFromClientX(e.clientX);
     });
 
     function handleDown(e) {
@@ -1536,7 +1726,8 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
     function handleMove(e) {
       if (!drag) return;
       e.preventDefault();
-      const t = clamp(((e.clientX - drag.startRect.left) / drag.startRect.width) * dur, 0, dur);
+      let t = clamp(((e.clientX - drag.startRect.left) / drag.startRect.width) * dur, 0, dur);
+      t = snapTime(t); // magnetic beats when snap is on, untouched otherwise
       if (drag.handle === "start") start = clamp(t, 0, end);
       else end = clamp(t, start, dur);
       syncVisual();
@@ -1566,6 +1757,21 @@ function mountTrimEditor(slot, mediaEl, srcW, srcH, cfg, previewNote) {
     // Preview begins at the in-point.
     try { mediaEl.currentTime = start; } catch (_) {}
     playhead.style.left = pct(start) + "%";
+
+    // Kick the async peak/beat decode AFTER the UI is on screen: the wave
+    // canvas paints the moment data lands (see scheduleWaveDraw), and the
+    // player/handles already work while it loads. Also repaint on resize.
+    sizeWaveCanvas();
+    drawWave(); // dark shell immediately — no blank flash
+    try {
+      const ro = new ResizeObserver(() => {
+        clearTimeout(trimWave._resizeT);
+        trimWave._resizeT = setTimeout(() => { sizeWaveCanvas(); scheduleWaveDraw(); }, 120);
+      });
+      ro.observe(waveWrap);
+      trimWave._resizeObs = ro;
+    } catch (_) { /* older browsers: fixed-size wave, still fine */ }
+    loadWaveform();
   });
 }
 
