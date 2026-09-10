@@ -1289,10 +1289,18 @@ tools.push({
   defaultExt: "mp4",
   build(ctx) {
     const video = ctx.file("video");
-    const w = ctx.param("w") || 640;
-    const h = ctx.param("h") || 360;
-    const x = ctx.param("x") || 0;
-    const y = ctx.param("y") || 0;
+    const num = (name, fallback) => {
+      const raw = ctx.param(name);
+      const v = raw === undefined || raw === null || raw === "" ? NaN : Number(raw);
+      return Number.isFinite(v) ? Math.round(v) : fallback;
+    };
+    // NOTE: plain `||` fallbacks would turn a real "0" offset into the
+    // fallback; use explicit numeric parsing so a right-side crop with
+    // x=0 keeps working and a large x survives truthy/falsy coercion.
+    const w = num("w", 640);
+    const h = num("h", 360);
+    const x = num("x", 0);
+    const y = num("y", 0);
     return { args: [I(video), "-vf", `crop=${w}:${h}:${x}:${y}`, "-c:a", "copy"], ext: "mp4" };
   },
 });
