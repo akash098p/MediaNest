@@ -334,6 +334,13 @@ async function mountVisualEditor() {
   let srcW = 0, srcH = 0, drawable = null;
   let videoEl = null; // visible player (kept in the timeline bar), drives the canvas.
   let previewNote = ""; // shown under the player when preview ≠ original file
+  // When the browser can't decode the file we show a downscaled server
+  // preview instead. previewScale maps preview pixels → original pixels
+  // (1:1 when the original decodes natively). The crop/resize editors use
+  // it to upscale the form values before submit so the server crops the
+  // region the user actually drew.
+  let previewScale = { x: 1, y: 1 };
+  let previewTrue = null; // { width, height } of the ORIGINAL file, when known
   try {
     const url = URL.createObjectURL(file);
     if (isVideoFile(file)) {
@@ -389,10 +396,16 @@ async function mountVisualEditor() {
 
       if (!dims) {
         // The browser can't decode this file — swap in a server-transcoded
-        // MP4 preview (same pictures, H.264 640px) so the trim timeline and
-        // crop/resize/rotate canvas still show the REAL video. The original
-        // `file` is untouched: Start download still uploads/processes it.
+        // MP4 preview (same pictures, H.264, downscaled to fit in 640px)
+        // so the trim timeline and crop/resize/rotate canvas still show the
+        // REAL video. The original `file` is untouched: Start download
+        // still uploads/processes it.
         //
+        // The preview may be SMALLER than the original, so every coordinate
+        // the user picks on the preview must be scaled back up to original
+        // pixels before the server runs the crop (see previewScale below).
+        // `previewNote` is shown under the player whenever preview !==
+        // original so the numbers on the form make sense.
         // The ORIGINAL blob URL (`url`) is the broken file — REVOKE it now.
         // Otherwise the dead <video> keeps an error state and its URL leaks.
         try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
@@ -427,7 +440,34 @@ async function mountVisualEditor() {
             await withTimeout(videoReady(videoEl), 15000);
             if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
               dims = { width: videoEl.videoWidth, height: videoEl.videoHeight };
-              previewNote = "Preview converted for your browser — Start download still uses your original file.";
+              // Probe the ORIGINAL file for its true dimensions — the preview
+              // is downscaled (fits in 640px), so the editor's coordinate
+              // space differs from what the server will crop. We keep both:
+              // `dims` (preview space, what the user sees) and `trueDims`
+              // (original space, what the server crops).
+              let trueDims = null;
+              try {
+                const probeBody = new FormData();
+                probeBody.append("file", file);
+                const probeRes = await fetch("/api/probe", { method: "POST", body: probeBody });
+                if (probeRes.ok) {
+                  const m = await probeRes.json();
+                  if (m && m.width > 0 && m.height > 0) {
+                    trueDims = { width: m.width, height: m.height };
+                  }
+                }
+              } catch (_) { /* probe failed — fall back to preview dims */ }
+              if (trueDims) {
+                previewScale = {
+                  x: trueDims.width / dims.width,
+                  y: trueDims.height / dims.height,
+                };
+                previewTrue = { ...trueDims };
+                previewNote =
+                  "Preview converted for your browser — Start download still uses your original file.";
+              } else {
+                previewNote = "Preview converted for your browser — Start download still uses your original file.";
+              }
             }
           } catch (_) { /* preview decode failed → guard below explains */ }
         }
