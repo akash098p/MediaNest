@@ -1550,14 +1550,16 @@ tools.push({
     const files = ctx.files("video");
     const n = files.length;
     const inputs = files.map((f) => I(f.path));
-    const ins = files.map((_, i) => `[${i}:v]`).join("");
+    const ins = files.map((_, i) => `[${i}:v][${i}:a]`).join("");
     return {
       args: [
         ...inputs.flat(),
         "-filter_complex",
-        `${ins}concat=n=${n}:v=1:a=0[outv]`,
+        `${ins}concat=n=${n}:v=1:a=1[outv][outa]`,
         "-map", "[outv]",
+        "-map", "[outa]",
         "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
       ],
       ext: "mp4",
     };
